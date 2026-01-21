@@ -1,0 +1,7 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+/* Basic reset if needed, though Tailwind handles most */
+body {
+  @apply bg-journal-50 text-journal-900 antialiased;
+}

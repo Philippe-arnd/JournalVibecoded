@@ -1,0 +1,307 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {
+      "type": "text",
+      "id": "title",
+      "x": 400,
+      "y": 30,
+      "width": 500,
+      "height": 40,
+      "text": "Journal PWA - React Component Hierarchy",
+      "fontSize": 24,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "strokeColor": "#37352F"
+    },
+    {
+      "type": "rectangle",
+      "id": "app",
+      "x": 500,
+      "y": 120,
+      "width": 200,
+      "height": 60,
+      "fillStyle": "solid",
+      "strokeWidth": 3,
+      "strokeColor": "#37352F",
+      "backgroundColor": "#FBF9F6",
+      "label": {
+        "text": "App.jsx\n(Root + Routing)",
+        "fontSize": 16,
+        "fontFamily": 1,
+        "textAlign": "center",
+        "verticalAlign": "middle",
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "type": "rectangle",
+      "id": "auth-context",
+      "x": 200,
+      "y": 250,
+      "width": 180,
+      "height": 60,
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeColor": "#2EAADC",
+      "backgroundColor": "#E3F2FD",
+      "label": {
+        "text": "AuthContext\n(User Session)",
+        "fontSize": 14,
+        "fontFamily": 1,
+        "textAlign": "center",
+        "verticalAlign": "middle"
+      }
+    },
+    {
+      "type": "rectangle",
+      "id": "entry-context",
+      "x": 420,
+      "y": 250,
+      "width": 180,
+      "height": 60,
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeColor": "#2EAADC",
+      "backgroundColor": "#E3F2FD",
+      "label": {
+        "text": "EntryContext\n(Current Entry)",
+        "fontSize": 14,
+        "fontFamily": 1,
+        "textAlign": "center",
+        "verticalAlign": "middle"
+      }
+    },
+    {
+      "type": "rectangle",
+      "id": "navigation",
+      "x": 640,
+      "y": 250,
+      "width": 180,
+      "height": 60,
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeColor": "#787774",
+      "backgroundColor": "#F5F5F5",
+      "label": {
+        "text": "Navigation\n(Tab Bar/Sidebar)",
+        "fontSize": 14,
+        "fontFamily": 1,
+        "textAlign": "center",
+        "verticalAlign": "middle"
+      }
+    },
+    {
+      "type": "rectangle",
+      "id": "onboarding",
+      "x": 100,
+      "y": 380,
+      "width": 200,
+      "height": 80,
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeColor": "#3ECF8E",
+      "backgroundColor": "#E8F5E9",
+      "label": {
+        "text": "OnboardingFlow\n\n└ OnboardingOverlay",
+        "fontSize": 14,
+        "fontFamily": 1,
+        "textAlign": "left",
+        "verticalAlign": "top"
+      }
+    },
+    {
+      "type": "rectangle",
+      "id": "entry-creation-view",
+      "x": 340,
+      "y": 380,
+      "width": 220,
+      "height": 220,
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeColor": "#D9730D",
+      "backgroundColor": "#FFF3E0",
+      "label": {
+        "text": "EntryCreationView\n\n├ ProgressIndicator\n├ EntrySection (×4)\n│  ├ SectionPrompt\n│  ├ TextArea\n│  └ AutoSaveIndicator\n└ CompleteButton",
+        "fontSize": 14,
+        "fontFamily": 3,
+        "textAlign": "left",
+        "verticalAlign": "top"
+      }
+    },
+    {
+      "type": "rectangle",
+      "id": "ai-feedback-view",
+      "x": 600,
+      "y": 380,
+      "width": 240,
+      "height": 220,
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeColor": "#E03E3E",
+      "backgroundColor": "#FFEBEE",
+      "label": {
+        "text": "AIFeedbackView\n\n├ AIFeedbackCard\n│  └ CitedEntryExcerpt\n├ StreakBadge\n├ EntryProgressBar\n│  (if <7 entries)\n└ NavigationActions",
+        "fontSize": 14,
+        "fontFamily": 3,
+        "textAlign": "left",
+        "verticalAlign": "top"
+      }
+    },
+    {
+      "type": "rectangle",
+      "id": "timeline-view",
+      "x": 880,
+      "y": 380,
+      "width": 240,
+      "height": 180,
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeColor": "#0F7B6C",
+      "backgroundColor": "#E0F2F1",
+      "label": {
+        "text": "TimelineView\n\n├ FloatingActionButton\n│  (\"Write Today\")\n└ TimelineEntryCard\n   (infinite scroll)\n   └ EntryContent",
+        "fontSize": 14,
+        "fontFamily": 3,
+        "textAlign": "left",
+        "verticalAlign": "top"
+      }
+    },
+    {
+      "type": "arrow",
+      "id": "arrow-app-auth",
+      "x": 600,
+      "y": 180,
+      "width": -310,
+      "height": 50,
+      "strokeColor": "#37352F",
+      "strokeWidth": 2,
+      "startArrowhead": null,
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "arrow",
+      "id": "arrow-app-entry-ctx",
+      "x": 600,
+      "y": 180,
+      "width": -90,
+      "height": 50,
+      "strokeColor": "#37352F",
+      "strokeWidth": 2,
+      "startArrowhead": null,
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "arrow",
+      "id": "arrow-app-nav",
+      "x": 600,
+      "y": 180,
+      "width": 130,
+      "height": 50,
+      "strokeColor": "#37352F",
+      "strokeWidth": 2,
+      "startArrowhead": null,
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "arrow",
+      "id": "arrow-app-onboarding",
+      "x": 500,
+      "y": 180,
+      "width": -300,
+      "height": 180,
+      "strokeColor": "#37352F",
+      "strokeWidth": 2,
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "strokeStyle": "dashed"
+    },
+    {
+      "type": "arrow",
+      "id": "arrow-app-entry-view",
+      "x": 600,
+      "y": 180,
+      "width": -150,
+      "height": 180,
+      "strokeColor": "#37352F",
+      "strokeWidth": 2,
+      "startArrowhead": null,
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "arrow",
+      "id": "arrow-app-feedback-view",
+      "x": 600,
+      "y": 180,
+      "width": 120,
+      "height": 180,
+      "strokeColor": "#37352F",
+      "strokeWidth": 2,
+      "startArrowhead": null,
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "arrow",
+      "id": "arrow-app-timeline-view",
+      "x": 700,
+      "y": 180,
+      "width": 280,
+      "height": 180,
+      "strokeColor": "#37352F",
+      "strokeWidth": 2,
+      "startArrowhead": null,
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "text",
+      "id": "legend",
+      "x": 100,
+      "y": 650,
+      "width": 300,
+      "height": 100,
+      "text": "Legend:\n\nSolid arrow = Always rendered\nDashed arrow = Conditionally rendered\n(×4) = Component rendered 4 times",
+      "fontSize": 13,
+      "fontFamily": 1,
+      "textAlign": "left",
+      "strokeColor": "#787774"
+    },
+    {
+      "type": "text",
+      "id": "hooks-note",
+      "x": 450,
+      "y": 650,
+      "width": 400,
+      "height": 120,
+      "text": "Custom Hooks (used across components):\n\n• useAutoSave() - Debounced entry saving\n• useEntry() - Current entry state\n• useUserProfile() - Streak & stats\n• useAIFeedback() - AI response fetching",
+      "fontSize": 13,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "strokeColor": "#2EAADC",
+      "backgroundColor": "#E3F2FD",
+      "fillStyle": "solid",
+      "strokeWidth": 2
+    },
+    {
+      "type": "text",
+      "id": "services-note",
+      "x": 900,
+      "y": 650,
+      "width": 220,
+      "height": 110,
+      "text": "Services Layer:\n\n• supabase.js\n• entryService.js\n• aiService.js\n• authService.js",
+      "fontSize": 13,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "strokeColor": "#3ECF8E",
+      "backgroundColor": "#E8F5E9",
+      "fillStyle": "solid",
+      "strokeWidth": 2
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "gridSize": 20
+  }
+}

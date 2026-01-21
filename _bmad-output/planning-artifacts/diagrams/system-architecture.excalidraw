@@ -1,0 +1,232 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {
+      "type": "rectangle",
+      "id": "user-browser",
+      "x": 100,
+      "y": 100,
+      "width": 200,
+      "height": 80,
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeColor": "#2EAADC",
+      "backgroundColor": "#E3F2FD",
+      "label": {
+        "text": "User Browser\n(Chrome, Safari, Firefox)",
+        "fontSize": 16,
+        "fontFamily": 1,
+        "textAlign": "center",
+        "verticalAlign": "middle"
+      }
+    },
+    {
+      "type": "rectangle",
+      "id": "react-app",
+      "x": 100,
+      "y": 250,
+      "width": 200,
+      "height": 120,
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeColor": "#61DAFB",
+      "backgroundColor": "#E1F5FE",
+      "label": {
+        "text": "React PWA\n\nComponents\nHooks & Context\nTailwind CSS",
+        "fontSize": 16,
+        "fontFamily": 1,
+        "textAlign": "center",
+        "verticalAlign": "middle"
+      }
+    },
+    {
+      "type": "rectangle",
+      "id": "supabase-backend",
+      "x": 450,
+      "y": 250,
+      "width": 200,
+      "height": 180,
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeColor": "#3ECF8E",
+      "backgroundColor": "#E8F5E9",
+      "label": {
+        "text": "Supabase Backend\n\nPostgreSQL DB\nAuth (JWT)\nRow Level Security\nReal-time (future)",
+        "fontSize": 16,
+        "fontFamily": 1,
+        "textAlign": "center",
+        "verticalAlign": "middle"
+      }
+    },
+    {
+      "type": "rectangle",
+      "id": "claude-api",
+      "x": 450,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeColor": "#D9730D",
+      "backgroundColor": "#FFF3E0",
+      "label": {
+        "text": "Claude API\n(Anthropic)\n\nAI Coaching\nPattern Recognition",
+        "fontSize": 16,
+        "fontFamily": 1,
+        "textAlign": "center",
+        "verticalAlign": "middle"
+      }
+    },
+    {
+      "type": "rectangle",
+      "id": "vercel-hosting",
+      "x": 800,
+      "y": 250,
+      "width": 180,
+      "height": 80,
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeColor": "#000000",
+      "backgroundColor": "#F5F5F5",
+      "label": {
+        "text": "Vercel Hosting\n\nStatic Assets\nCDN",
+        "fontSize": 16,
+        "fontFamily": 1,
+        "textAlign": "center",
+        "verticalAlign": "middle"
+      }
+    },
+    {
+      "type": "arrow",
+      "id": "arrow-1",
+      "x": 200,
+      "y": 180,
+      "width": 0,
+      "height": 50,
+      "strokeColor": "#37352F",
+      "strokeWidth": 2,
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "label": {
+        "text": "Loads PWA",
+        "fontSize": 14
+      }
+    },
+    {
+      "type": "arrow",
+      "id": "arrow-2",
+      "x": 300,
+      "y": 310,
+      "width": 130,
+      "height": 0,
+      "strokeColor": "#37352F",
+      "strokeWidth": 2,
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "label": {
+        "text": "Auth, CRUD\nEntries",
+        "fontSize": 14
+      }
+    },
+    {
+      "type": "arrow",
+      "id": "arrow-3",
+      "x": 300,
+      "y": 350,
+      "width": 130,
+      "height": 190,
+      "strokeColor": "#37352F",
+      "strokeWidth": 2,
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "label": {
+        "text": "AI Feedback\nRequest",
+        "fontSize": 14
+      }
+    },
+    {
+      "type": "arrow",
+      "id": "arrow-4",
+      "x": 650,
+      "y": 340,
+      "width": 130,
+      "height": 0,
+      "strokeColor": "#37352F",
+      "strokeWidth": 2,
+      "startArrowhead": "arrow",
+      "endArrowhead": null,
+      "label": {
+        "text": "Returns Data",
+        "fontSize": 14
+      }
+    },
+    {
+      "type": "arrow",
+      "id": "arrow-5",
+      "x": 550,
+      "y": 430,
+      "width": 0,
+      "height": 50,
+      "strokeColor": "#37352F",
+      "strokeWidth": 2,
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "label": {
+        "text": "Query past\nentries",
+        "fontSize": 14
+      }
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "x": 300,
+      "y": 30,
+      "width": 400,
+      "height": 40,
+      "text": "Journal PWA - System Architecture",
+      "fontSize": 24,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "strokeColor": "#37352F"
+    },
+    {
+      "type": "rectangle",
+      "id": "db-tables",
+      "x": 450,
+      "y": 100,
+      "width": 200,
+      "height": 100,
+      "fillStyle": "hachure",
+      "strokeWidth": 1,
+      "strokeColor": "#3ECF8E",
+      "backgroundColor": "transparent",
+      "strokeStyle": "dashed",
+      "label": {
+        "text": "Database Tables:\n• user_profiles\n• entries\n• milestones",
+        "fontSize": 14,
+        "fontFamily": 1,
+        "textAlign": "left",
+        "verticalAlign": "top"
+      }
+    },
+    {
+      "type": "arrow",
+      "id": "arrow-6",
+      "x": 550,
+      "y": 200,
+      "width": 0,
+      "height": 30,
+      "strokeColor": "#3ECF8E",
+      "strokeWidth": 1,
+      "strokeStyle": "dashed",
+      "startArrowhead": null,
+      "endArrowhead": null
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "gridSize": 20
+  }
+}

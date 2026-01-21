@@ -1,0 +1,132 @@
+# Sprint Status - journal
+# Generated: 2026-01-17
+# Project: dev
+# Tracking System: file-system
+# Story Location: {project-root}/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+#
+# PROTOTYPE PHASE NOTES:
+# ======================
+# - Building interactive front-end prototype FIRST to validate UX before backend
+# - Prototype stories use mock data (localStorage, hardcoded responses)
+# - Skip: Real auth, database, AI API integration, PWA features
+# - Include: Full UI/UX, animations, transitions, responsive design, all interactions
+# - After prototype validation, implement backend stories (marked with [BACKEND] prefix)
+
+generated: 2026-01-17
+project: dev
+project_key: journal
+tracking_system: file-system
+story_location: {project-root}/_bmad-output/implementation-artifacts
+
+development_status:
+  # ========================================
+  # PHASE 0: PROTOTYPE - Interactive UI/UX Validation
+  # ========================================
+  # Goal: Build fully interactive front-end with mock data to test UX flows
+  # Timeline: 1-2 weeks
+  # Success: User can complete full journaling flow, view timeline, see AI feedback (mocked)
+
+  prototype-phase: in-progress
+  proto-1-1-project-setup-ui-foundation: review
+  proto-1-6-design-system-visual-foundation: review
+  proto-2-1-entry-landing-mock-data: review
+  proto-2-2-2-5-four-section-flow: review
+  proto-2-6-auto-save-ui-indicators: review
+  proto-2-7-mobile-responsive-testing: review
+  proto-3-2-ai-encouragement-display-mock: review
+  proto-3-3-pattern-recognition-display-mock: backlog
+  proto-3-5-progress-bar-ui: backlog
+  proto-3-6-streak-badge-display: backlog
+  proto-4-1-milestone-celebration-animation: backlog
+  proto-5-1-5-2-timeline-expandable-cards: backlog
+  proto-5-4-floating-write-button: backlog
+  proto-6-1-onboarding-overlay: backlog
+  prototype-phase-retrospective: optional
+
+  # ========================================
+  # PHASE 1: BACKEND INTEGRATION - After Prototype Validation
+  # ========================================
+  # These stories will be activated after prototype is validated and approved
+
+  # Epic 1: Authentication & Initial Setup
+  epic-1: backlog
+  1-1-project-setup-tech-stack-initialization: backlog
+  1-2-user-registration-with-email-password: backlog
+  1-3-user-login-with-email-password: backlog
+  1-4-session-management-protected-routes: backlog
+  1-5-pwa-manifest-installability: backlog
+  1-6-notion-inspired-visual-foundation: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: Guided Entry Creation Flow
+  epic-2: backlog
+  2-1-entry-creation-landing-experience: backlog
+  2-2-section-1-professional-recap-entry: backlog
+  2-3-section-2-personal-recap-entry: backlog
+  2-4-section-3-learning-reflections-entry: backlog
+  2-5-section-4-gratitude-entry: backlog
+  2-6-entry-section-auto-save-functionality: backlog
+  2-7-mobile-first-responsive-entry-creation: backlog
+  2-8-desktop-keyboard-shortcuts: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: AI Coaching & Feedback System
+  epic-3: backlog
+  3-1-ai-feedback-api-integration: backlog
+  3-2-simple-encouragement-feedback-days-1-6: backlog
+  3-3-pattern-recognition-feedback-day-7-plus: backlog
+  3-4-ai-feedback-delivery-performance: backlog
+  3-5-entry-progress-bar-pre-7-entries: backlog
+  3-6-streak-badge-display: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Habit Formation & Streak Tracking
+  epic-4: backlog
+  4-1-milestone-badge-achievement: backlog
+  4-2-graceful-streak-recovery: backlog
+  4-3-streak-history-viewing: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Timeline & Historical Entry Browsing
+  epic-5: backlog
+  5-1-timeline-view-with-collapsed-entry-cards: backlog
+  5-2-expandable-entry-cards: backlog
+  5-3-timeline-smooth-scrolling-performance: backlog
+  5-4-floating-write-today-button: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: Onboarding & Premium Feature Validation
+  epic-6: backlog
+  6-1-first-time-user-onboarding-overlay: backlog
+  6-2-upgrade-for-voice-premium-feature-teaser: backlog
+  6-3-feature-interest-analytics-tracking: backlog
+  epic-6-retrospective: optional
