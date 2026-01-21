@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { useAuth } from './contexts/AuthContext';
+import LandingView from './views/LandingView';
 import LoginView from './views/LoginView';
 import HomeView from './views/HomeView';
 import EntryCreationView from './views/EntryCreationView';
@@ -8,15 +10,38 @@ import { Loader2 } from 'lucide-react';
 
 function App() {
   const { user, loading: authLoading } = useAuth();
-  
-  // State
-  const [currentView, setCurrentView] = useState('home'); // 'home' | 'create'
+
+  // Render Loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-journal-50">
+        <Loader2 className="animate-spin text-journal-900" size={40} />
+      </div>
+    );
+  }
+
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/" element={user ? <Navigate to="/home" replace /> : <LandingView />} />
+      <Route path="/login" element={user ? <Navigate to="/home" replace /> : <LoginView mode="login" />} />
+      <Route path="/signup" element={user ? <Navigate to="/home" replace /> : <LoginView mode="signup" />} />
+
+      {/* Protected Routes */}
+      <Route path="/home" element={user ? <AuthenticatedHome /> : <Navigate to="/login" replace />} />
+      <Route path="/create" element={user ? <AuthenticatedCreate /> : <Navigate to="/login" replace />} />
+    </Routes>
+  );
+}
+
+// Component for authenticated home route
+function AuthenticatedHome() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [entries, setEntries] = useState([]);
   const [streak, setStreak] = useState(0);
-  const [selectedEntry, setSelectedEntry] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Data Fetching Logic
   const loadData = async () => {
     if (!user) return;
     setLoading(true);
@@ -50,43 +75,26 @@ function App() {
     }
   };
 
-  // Initial Load
   useEffect(() => {
-    if (user) {
-      loadData();
-    }
+    loadData();
   }, [user]);
 
-  // Handlers
   const handleStartNew = (options = {}) => {
     const { entry_date } = options;
 
-    // If a specific date is provided, check for existing entry on that date
+    // Store entry data in navigation state
     if (entry_date) {
       const existingEntry = entries.find(e => e.entry_date === entry_date);
-      if (existingEntry) {
-        setSelectedEntry(existingEntry);
-      } else {
-        // Create a new entry for the specified date
-        setSelectedEntry({ entry_date });
-      }
+      navigate('/create', { state: { entry: existingEntry || { entry_date } } });
     } else {
-      // Default behavior: check for today's entry
       const today = new Date().toISOString().split('T')[0];
       const todayEntry = entries.find(e => e.entry_date === today);
-
-      if (todayEntry) {
-        setSelectedEntry(todayEntry);
-      } else {
-        setSelectedEntry(null); // Null means "Create New" for today
-      }
+      navigate('/create', { state: { entry: todayEntry || null } });
     }
-    setCurrentView('create');
   };
 
   const handleEditEntry = (entry) => {
-    setSelectedEntry(entry);
-    setCurrentView('create');
+    navigate('/create', { state: { entry } });
   };
 
   const handleDeleteEntry = async (id) => {
@@ -98,7 +106,7 @@ function App() {
           .eq('id', id);
 
         if (error) throw error;
-        await loadData(); // Refresh list
+        await loadData();
       } catch (error) {
         console.error('Failed to delete:', error);
         alert('Failed to delete entry: ' + error.message);
@@ -106,14 +114,7 @@ function App() {
     }
   };
 
-  const handleEntryFinish = async () => {
-    await loadData(); // Refresh data to update streak and timeline
-    setCurrentView('home');
-    setSelectedEntry(null);
-  };
-
-  // Render Loading
-  if (authLoading || (user && loading && entries.length === 0)) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-journal-50">
         <Loader2 className="animate-spin text-journal-900" size={40} />
@@ -121,28 +122,41 @@ function App() {
     );
   }
 
-  // Render Login
-  if (!user) return <LoginView />;
-
-  // Render Main App
   return (
     <div className="min-h-screen bg-journal-50 font-sans text-journal-900">
-      {currentView === 'home' ? (
-        <HomeView 
-          entries={entries} 
-          streak={streak} 
-          onStartNew={handleStartNew} 
-          onEdit={handleEditEntry} 
-          onDelete={handleDeleteEntry} 
-        />
-      ) : (
-        <EntryCreationView 
-          key={selectedEntry?.id || 'new'} // Force re-render on entry change
-          initialEntry={selectedEntry} // Pass this prop if EntryCreationView uses it, otherwise it handles logic internally
-          onFinish={handleEntryFinish} 
-          onClose={() => setCurrentView('home')}
-        />
-      )}
+      <HomeView
+        entries={entries}
+        streak={streak}
+        onStartNew={handleStartNew}
+        onEdit={handleEditEntry}
+        onDelete={handleDeleteEntry}
+      />
+    </div>
+  );
+}
+
+// Component for authenticated create route
+function AuthenticatedCreate() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const selectedEntry = location.state?.entry;
+
+  const handleEntryFinish = () => {
+    navigate('/home');
+  };
+
+  const handleClose = () => {
+    navigate('/home');
+  };
+
+  return (
+    <div className="min-h-screen bg-journal-50 font-sans text-journal-900">
+      <EntryCreationView
+        key={selectedEntry?.id || 'new'}
+        initialEntry={selectedEntry}
+        onFinish={handleEntryFinish}
+        onClose={handleClose}
+      />
     </div>
   );
 }

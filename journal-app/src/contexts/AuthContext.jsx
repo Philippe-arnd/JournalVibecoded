@@ -27,6 +27,25 @@ export const AuthProvider = ({ children }) => {
     signUp: (data) => supabase.auth.signUp(data),
     signIn: (data) => supabase.auth.signInWithPassword(data),
     signOut: () => supabase.auth.signOut(),
+    resetPassword: (email) => supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    }),
+    changePassword: async (currentPassword, newPassword) => {
+      // Verify current password by re-authenticating
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+
+      if (authError) {
+        return { error: { message: 'Current password is incorrect' } };
+      }
+
+      // If verification succeeds, update password
+      return await supabase.auth.updateUser({
+        password: newPassword,
+      });
+    },
     user,
   };
 

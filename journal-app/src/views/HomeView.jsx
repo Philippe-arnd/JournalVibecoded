@@ -1,13 +1,17 @@
-import { Plus, ChevronDown, Trash2, Edit2, Calendar as CalendarIcon, List, Settings, LogOut, Lock, X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Plus, ChevronDown, Trash2, Edit2, Calendar as CalendarIcon, List, Settings, LogOut, Lock, X, ChevronLeft, ChevronRight, Sparkles, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Flame } from 'lucide-react';
 import Logo from '../components/Logo';
 import DailysInsights from './DailysInsights';
+import PasswordInput from '../components/PasswordInput';
+import PasswordConfirmation from '../components/PasswordConfirmation';
 
 export default function HomeView({ onStartNew, entries, onEdit, onDelete, streak }) {
   const { signOut } = useAuth();
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('timeline');
   const [showSettings, setShowSettings] = useState(false);
   const [showDateSelection, setShowDateSelection] = useState(false);
@@ -143,7 +147,21 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete, streak
 
       <AnimatePresence>
         {showSettings && (
-          <SettingsModal onClose={() => setShowSettings(false)} onSignOut={signOut} />
+          <SettingsModal
+            onClose={() => setShowSettings(false)}
+            onSignOut={async () => {
+              try {
+                await signOut();
+              } catch (error) {
+                // Ignore errors during sign out (e.g. session already expired)
+                console.error('Sign out error:', error);
+              }
+              // Clear all local storage to ensure session is gone
+              localStorage.clear();
+              // Force a full page reload to clear all state
+              window.location.href = '/login';
+            }}
+          />
         )}
         {showDateSelection && (
           <DateSelectionModal onClose={() => setShowDateSelection(false)} onSelect={handleDateSelect} />
@@ -449,15 +467,96 @@ function TimelineCard({ entry, onEdit, onDelete }) {
 }
 
 function SettingsModal({ onClose, onSignOut }) {
+  const { changePassword } = useAuth();
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Calculate password strength for validation
+  const calculatePasswordStrength = (pwd) => {
+    let score = 0;
+    if (pwd.length >= 8) score++;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[a-z]/.test(pwd)) score++;
+    if (/\d/.test(pwd)) score++;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) score++;
+    return Math.min(score, 4);
+  };
+
+  const passwordStrength = calculatePasswordStrength(newPassword);
+  const passwordsMatch = newPassword === confirmNewPassword && confirmNewPassword.length > 0;
+  const isPasswordValid = passwordStrength >= 2; // Fair or Strong
+  const isFormValid = currentPassword && passwordsMatch && isPasswordValid;
+
+  const handlePasswordUpdate = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess(false);
+    setLoading(true);
+
+    try {
+      // Validate before submission
+      if (!passwordsMatch) {
+        setError('New passwords do not match');
+        setLoading(false);
+        return;
+      }
+      if (passwordStrength < 2) {
+        setError('New password is not strong enough');
+        setLoading(false);
+        return;
+      }
+      if (newPassword === currentPassword) {
+        setError('New password must be different from current password');
+        setLoading(false);
+        return;
+      }
+
+      // Verify current password and update to new password
+      const { error: updateError } = await changePassword(currentPassword, newPassword);
+
+      if (updateError) {
+        setError(updateError.message);
+      } else {
+        setSuccess(true);
+        // Close modal after showing success message
+        setTimeout(() => {
+          setCurrentPassword('');
+          setNewPassword('');
+          setConfirmNewPassword('');
+          setShowPasswordChange(false);
+          setSuccess(false);
+          onClose();
+        }, 1500);
+      }
+    } catch (err) {
+      setError('Failed to update password. Please try again.');
+    }
+    setLoading(false);
+  };
+
+  const handlePasswordChangeCancel = () => {
+    setShowPasswordChange(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setError('');
+    setSuccess(false);
+  };
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-journal-900/20 backdrop-blur-sm z-50 flex items-center justify-center p-6"
       onClick={onClose}
     >
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
@@ -465,31 +564,97 @@ function SettingsModal({ onClose, onSignOut }) {
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6 border-b border-journal-50 flex justify-between items-center">
-          <h2 className="text-lg font-serif font-medium text-journal-900">Settings</h2>
+          <h2 className="text-lg font-serif font-medium text-journal-900">
+            {showPasswordChange ? 'Change Password' : 'Settings'}
+          </h2>
           <button onClick={onClose} className="text-journal-400 hover:text-journal-600">
             <X size={20} strokeWidth={1.5} />
           </button>
         </div>
-        
-        <div className="p-6 space-y-6">
-          <div>
-            <h3 className="text-xs font-bold text-journal-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Lock size={14} /> Security
-            </h3>
-            <div className="space-y-3 opacity-50 cursor-not-allowed">
-              <input disabled type="password" placeholder="••••••••" className="w-full p-3 rounded-lg bg-journal-50 text-sm" />
-              <button disabled className="w-full bg-journal-100 text-journal-400 py-2 rounded-lg text-sm font-medium">Update Password</button>
-            </div>
-          </div>
 
-          <div className="pt-6 border-t border-journal-50">
-            <button 
-              onClick={onSignOut}
-              className="w-full flex items-center justify-center gap-2 text-red-500 hover:bg-red-50 p-3 rounded-lg transition-colors font-medium text-sm"
-            >
-              <LogOut size={16} /> Sign Out
-            </button>
-          </div>
+        <div className="p-6 space-y-6">
+          {showPasswordChange ? (
+            // Password Change Form
+            <form onSubmit={handlePasswordUpdate} className="space-y-4">
+              <PasswordInput
+                label="Current Password"
+                value={currentPassword}
+                onChange={setCurrentPassword}
+                showStrength={false}
+                showRequirements={false}
+                autoComplete="current-password"
+              />
+
+              <PasswordConfirmation
+                password={newPassword}
+                confirmPassword={confirmNewPassword}
+                onPasswordChange={setNewPassword}
+                onConfirmPasswordChange={setConfirmNewPassword}
+                showStrength={true}
+              />
+
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-600">
+                  ✓ Password updated successfully
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={loading || !isFormValid}
+                  className="flex-1 bg-journal-900 text-white p-2 rounded-lg text-sm font-medium hover:bg-black transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Update Password'
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePasswordChangeCancel}
+                  className="flex-1 bg-journal-50 text-journal-900 p-2 rounded-lg text-sm font-medium hover:bg-journal-100 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            // Settings Menu
+            <>
+              <div>
+                <h3 className="text-xs font-bold text-journal-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Lock size={14} /> Security
+                </h3>
+                <button
+                  onClick={() => setShowPasswordChange(true)}
+                  className="w-full bg-journal-50 hover:bg-journal-100 text-journal-900 p-3 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Change Password
+                </button>
+              </div>
+
+              <div className="pt-6 border-t border-journal-50">
+                <button
+                  type="button"
+                  onClick={onSignOut}
+                  className="w-full flex items-center justify-center gap-2 text-red-500 hover:bg-red-50 p-3 rounded-lg transition-colors font-medium text-sm"
+                >
+                  <LogOut size={16} /> Sign Out
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </motion.div>
     </motion.div>

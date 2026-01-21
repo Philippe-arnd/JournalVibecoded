@@ -112,18 +112,10 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
   return (
     <div className="fixed inset-0 bg-journal-50 text-journal-900 font-sans flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-6 pt-6 pb-2 flex justify-between items-center z-50">
+      <div className="px-6 pt-6 pb-4 flex justify-between items-center z-50">
         <button onClick={onClose} className="p-2 -ml-2 text-journal-500 hover:text-journal-900 transition-colors">
           <X size={24} />
         </button>
-        <div className="flex flex-col items-center">
-          <span className="text-sm font-serif font-bold text-journal-900">
-            {new Date(entryData.entry_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-          </span>
-          <div className="text-xs font-medium text-journal-400">
-            {currentSectionIndex + 1} / {SECTIONS.length}
-          </div>
-        </div>
         <div className="w-8 flex justify-end">
           {isSaving && <Loader2 size={16} className="animate-spin text-journal-400" />}
         </div>
@@ -216,10 +208,21 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
             )}
 
             <div className="p-8 flex-1 flex flex-col">
-              <h2 className="text-2xl md:text-3xl font-serif font-bold text-journal-900 mb-2">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <div className="text-sm font-medium text-journal-400 mb-2">
+                    {currentSectionIndex + 1} / {SECTIONS.length}
+                  </div>
+                  <span className="text-2xl font-serif font-bold text-journal-900">
+                    {new Date(entryData.entry_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              </div>
+
+              <h2 className="text-3xl md:text-4xl font-serif font-bold text-journal-900 mb-6">
                 {SECTIONS[currentSectionIndex].title}
               </h2>
-              <p className="text-journal-500 text-lg mb-6">
+              <p className="text-journal-500 text-lg mb-8">
                 {SECTIONS[currentSectionIndex].prompt}
               </p>
               
@@ -245,7 +248,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
                 autoFocus
               />
               
-              <div className="mt-4 text-sm text-journal-200 italic">
+              <div className="mt-6 text-sm text-journal-200 italic pb-2">
                 {SECTIONS[currentSectionIndex].helper}
               </div>
             </div>
