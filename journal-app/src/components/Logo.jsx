@@ -1,27 +1,40 @@
 import React from 'react';
 
 export default function Logo({ className = "", size = 32 }) {
+  // Use the accent color #E07A5F for the feather stroke
   return (
     <svg 
       width={size} 
       height={size} 
-      viewBox="0 0 48 48" 
+      viewBox="0 0 24 24" 
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
-      {/* Pages (Depth) */}
-      <path d="M36 8H40C41.1046 8 42 8.89543 42 10V38C42 39.1046 41.1046 40 40 40H36V8Z" fill="#9CA3AF"/>
-      <path d="M36 8H38V40H36V8Z" fill="#D1D5DB"/>
-      
-      {/* Cover */}
-      <rect x="6" y="4" width="32" height="40" rx="2" fill="#37352F"/>
-      
-      {/* Spine Detail */}
-      <rect x="10" y="4" width="1" height="40" fill="white" fillOpacity="0.1"/>
-      
-      {/* Letter J */}
-      <path d="M23.5 14H27.5V16.5H26V27.5C26 30 24.5 32 21.5 32C19 32 17 30.5 16.5 29L18 27.5C18.5 28.5 19.5 29.5 21 29.5C22.5 29.5 23.5 28.5 23.5 27V16.5H20.5V14H23.5Z" fill="#D9730D"/>
+      <path 
+        d="M20.24 12.24C21.3658 11.1142 21.9983 9.58719 21.9983 7.99504C21.9983 6.40289 21.3658 4.87588 20.24 3.75004C19.1142 2.62419 17.5872 1.9917 15.995 1.9917C14.4029 1.9917 12.8758 2.62419 11.75 3.75004L5 10.5V19H13.5L20.24 12.24Z" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+        className="text-accent" 
+      />
+      <path 
+        d="M16 8L2 22" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+        className="text-accent"
+      />
+      <path 
+        d="M17.5 15H9" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+        className="text-accent"
+      />
     </svg>
   );
 }

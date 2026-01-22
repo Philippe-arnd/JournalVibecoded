@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, X, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, X, Check, Loader2, Bold, List, Indent, Outdent } from 'lucide-react';
 import { entryService } from '../services/entryService';
 
 const SECTIONS = [
@@ -29,6 +29,76 @@ const SECTIONS = [
     helper: 'Big or small, personal or professional'
   }
 ];
+
+const RichTextEditor = ({ value, onChange, placeholder }) => {
+  const editorRef = useRef(null);
+
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = value || '';
+    }
+  }, []);
+
+  const handleInput = () => {
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+    }
+  };
+
+  const exec = (command, value = null) => {
+    document.execCommand(command, false, value);
+    editorRef.current?.focus();
+  };
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      <div className="flex gap-1 mb-2 border-b border-journal-100 pb-2">
+        <button 
+          onClick={() => exec('bold')}
+          className="p-1.5 text-journal-400 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
+          title="Bold"
+        >
+          <Bold size={18} />
+        </button>
+        <div className="w-px bg-journal-100 mx-1" />
+        <button 
+          onClick={() => exec('insertUnorderedList')}
+          className="p-1.5 text-journal-400 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
+          title="Bullet List"
+        >
+          <List size={18} />
+        </button>
+        <button 
+          onClick={() => exec('outdent')}
+          className="p-1.5 text-journal-400 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
+          title="Outdent"
+        >
+          <Outdent size={18} />
+        </button>
+        <button 
+          onClick={() => exec('indent')}
+          className="p-1.5 text-journal-400 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
+          title="Indent"
+        >
+          <Indent size={18} />
+        </button>
+      </div>
+      
+      <div
+        ref={editorRef}
+        contentEditable
+        className="flex-1 overflow-y-auto outline-none text-lg text-journal-900 prose prose-journal 
+          [&_ul]:list-disc [&_ul]:pl-5 
+          [&_ol]:list-decimal [&_ol]:pl-5 
+          [&_ul_ul]:list-[circle] [&_ul_ul_ul]:list-[square]
+          [&_blockquote]:border-l-4 [&_blockquote]:border-journal-200 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:ml-0"
+        onInput={handleInput}
+        placeholder={placeholder}
+        style={{ minHeight: '150px' }} 
+      />
+    </div>
+  );
+};
 
 export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
@@ -110,21 +180,26 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-journal-50 text-journal-900 font-sans flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-journal-50/80 backdrop-blur-sm text-journal-900 font-sans flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 flex justify-between items-center z-50">
-        <button onClick={onClose} className="p-2 -ml-2 text-journal-500 hover:text-journal-900 transition-colors">
+      <div className="px-6 pt-6 pb-2 flex justify-between items-center z-50">
+        <button onClick={onClose} className="p-2 -ml-2 text-journal-500 hover:text-journal-900 transition-colors bg-white/50 rounded-full hover:bg-white">
           <X size={24} />
         </button>
-        <div className="w-8 flex justify-end">
-          {isSaving && <Loader2 size={16} className="animate-spin text-journal-400" />}
+        <div className="flex items-center gap-3">
+           <div className="text-xs font-bold text-journal-400 uppercase tracking-widest">
+              {currentSectionIndex + 1} / {SECTIONS.length}
+          </div>
+          <div className="w-4 flex justify-end">
+            {isSaving && <Loader2 size={16} className="animate-spin text-journal-400" />}
+          </div>
         </div>
       </div>
 
       {/* Card Stack Container */}
-      <div className="flex-1 relative flex items-center justify-center p-6">
+      <div className="flex-1 relative flex items-center justify-center p-4">
         {/* Stack visuals - Next cards peeking */}
-        {[3, 2, 1].map((offset) => {
+        {[2, 1].map((offset) => {
           const index = (currentSectionIndex + offset) % SECTIONS.length;
           const section = SECTIONS[index];
           // Map section ID to DB field name
@@ -136,33 +211,24 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
           const hasContent = entryData[fieldName]?.trim().length > 0;
           
           // Alternating rotations to show corners
-          const rotate = offset === 1 ? 3 : offset === 2 ? -2 : 1;
-          const translateY = offset * 12;
-          const scale = 1 - offset * 0.05;
+          const rotate = offset === 1 ? 2 : -1;
+          const translateY = offset * 8;
+          const scale = 1 - offset * 0.04;
 
           return (
             <div
               key={section.id}
-              className="absolute w-full max-w-lg bg-white rounded-3xl shadow-sm border border-journal-200 h-[65vh] md:h-[600px] transition-all duration-500 ease-in-out flex flex-col overflow-hidden"
+              className="absolute w-[90%] md:w-full max-w-md bg-white rounded-3xl shadow-sm border border-journal-200 h-[75vh] transition-all duration-500 ease-in-out flex flex-col overflow-hidden"
               style={{
                 zIndex: -offset,
                 transform: `translateY(${translateY}px) scale(${scale}) rotate(${rotate}deg)`,
-                opacity: Math.max(0.5, 1 - offset * 0.15),
+                opacity: Math.max(0.4, 0.8 - offset * 0.2),
               }}
             >
-              {hasContent && (
-                <div className="absolute top-6 right-6 text-journal-500 bg-journal-50 rounded-full p-1 z-20 shadow-sm">
-                  <Check size={20} />
-                </div>
-              )}
-              
               <div className="p-8 flex-1 flex flex-col opacity-20 pointer-events-none select-none">
-                <h2 className="text-2xl md:text-3xl font-serif font-bold text-journal-900 mb-2">
+                <h2 className="text-2xl font-serif font-bold text-journal-900 mb-2">
                   {section.title}
                 </h2>
-                <p className="text-journal-500 text-lg">
-                  {section.prompt}
-                </p>
               </div>
             </div>
           );
@@ -191,44 +257,46 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
                 handlePrev();
               }
             }}
-            className="absolute w-full max-w-lg bg-white rounded-3xl shadow-xl border border-journal-200 flex flex-col h-[65vh] md:h-[600px] z-10"
+            className="absolute w-[90%] md:w-full max-w-md bg-white rounded-3xl shadow-xl border border-journal-200 flex flex-col h-[75vh] z-10"
           >
-            {/* Tic Mark */}
-            {(() => {
-               const section = SECTIONS[currentSectionIndex];
-               const fieldName = section.id === 'professional' ? 'professional_recap' 
-                : section.id === 'personal' ? 'personal_recap'
-                : section.id === 'learning' ? 'learning_reflections'
-                : 'gratitude';
-               return entryData[fieldName]?.trim().length > 0;
-            })() && (
-              <div className="absolute top-6 right-6 text-journal-500 bg-journal-50 rounded-full p-1">
-                <Check size={20} />
-              </div>
-            )}
+            {/* Navigation Buttons Floating */}
+            <div className="absolute top-6 right-6 z-20">
+              <button 
+                onClick={handleNext}
+                className="bg-journal-900 text-white p-3 rounded-full shadow-lg shadow-journal-900/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+              >
+                {currentSectionIndex === SECTIONS.length - 1 ? <Check size={20} /> : <ArrowRight size={20} />}
+              </button>
+            </div>
+            
+             {currentSectionIndex > 0 && (
+                <div className="absolute top-6 left-6 z-20">
+                  <button 
+                    onClick={handlePrev}
+                    className="bg-white border border-journal-100 text-journal-400 p-2 rounded-full shadow-sm hover:text-journal-900 hover:scale-105 active:scale-95 transition-all"
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
+                </div>
+             )}
 
-            <div className="p-8 flex-1 flex flex-col">
-              <div className="flex justify-between items-start mb-6">
+            <div className="p-8 pt-16 flex-1 flex flex-col">
+              <div className="flex justify-between items-start mb-2">
                 <div>
-                  <div className="text-sm font-medium text-journal-400 mb-2">
-                    {currentSectionIndex + 1} / {SECTIONS.length}
-                  </div>
-                  <span className="text-2xl font-serif font-bold text-journal-900">
-                    {new Date(entryData.entry_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  <span className="text-sm font-bold text-journal-300 uppercase tracking-widest">
+                    {new Date(entryData.entry_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}
                   </span>
                 </div>
               </div>
 
-              <h2 className="text-3xl md:text-4xl font-serif font-bold text-journal-900 mb-6">
+              <h2 className="text-3xl font-serif font-bold text-journal-900 mb-2">
                 {SECTIONS[currentSectionIndex].title}
               </h2>
-              <p className="text-journal-500 text-lg mb-8">
+              <p className="text-journal-500 text-base mb-6 leading-relaxed">
                 {SECTIONS[currentSectionIndex].prompt}
               </p>
               
-              <textarea
-                className="flex-1 w-full resize-none outline-none text-lg text-journal-900 placeholder:text-journal-200 bg-transparent"
-                placeholder="Type here..."
+              <RichTextEditor
                 value={(() => {
                    const section = SECTIONS[currentSectionIndex];
                    const fieldName = section.id === 'professional' ? 'professional_recap' 
@@ -237,45 +305,23 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
                     : 'gratitude';
                    return entryData[fieldName];
                 })()}
-                onChange={(e) => {
+                onChange={(newValue) => {
                    const section = SECTIONS[currentSectionIndex];
                    const fieldName = section.id === 'professional' ? 'professional_recap' 
                     : section.id === 'personal' ? 'personal_recap'
                     : section.id === 'learning' ? 'learning_reflections'
                     : 'gratitude';
-                   setEntryData({ ...entryData, [fieldName]: e.target.value });
+                   setEntryData({ ...entryData, [fieldName]: newValue });
                 }}
-                autoFocus
+                placeholder="Type here..."
               />
               
-              <div className="mt-6 text-sm text-journal-200 italic pb-2">
+              <div className="mt-4 text-xs text-journal-300 italic">
                 {SECTIONS[currentSectionIndex].helper}
               </div>
             </div>
           </motion.div>
         </AnimatePresence>
-      </div>
-
-      {/* Navigation Controls */}
-      <div className="p-8 pb-12 flex justify-between items-center max-w-lg mx-auto w-full z-10">
-        <button 
-          onClick={handlePrev}
-          disabled={currentSectionIndex === 0}
-          className={`p-4 rounded-full transition-all ${
-            currentSectionIndex === 0 
-              ? 'text-journal-200 cursor-not-allowed' 
-              : 'bg-white text-journal-900 shadow-md hover:scale-110 active:scale-95'
-          }`}
-        >
-          <ArrowLeft size={24} />
-        </button>
-
-        <button 
-          onClick={handleNext}
-          className="bg-journal-accent text-white p-4 rounded-full shadow-lg shadow-journal-accent/30 hover:scale-110 active:scale-95 transition-all"
-        >
-          {currentSectionIndex === SECTIONS.length - 1 ? <Check size={28} /> : <ArrowRight size={28} />}
-        </button>
       </div>
     </div>
   );

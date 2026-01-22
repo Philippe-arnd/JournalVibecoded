@@ -6,6 +6,8 @@ import LandingView from './views/LandingView';
 import LoginView from './views/LoginView';
 import HomeView from './views/HomeView';
 import EntryCreationView from './views/EntryCreationView';
+import PrivacyPolicyView from './views/PrivacyPolicyView';
+import TermsOfServiceView from './views/TermsOfServiceView';
 import { Loader2 } from 'lucide-react';
 
 function App() {
@@ -26,6 +28,8 @@ function App() {
       <Route path="/" element={user ? <Navigate to="/home" replace /> : <LandingView />} />
       <Route path="/login" element={user ? <Navigate to="/home" replace /> : <LoginView mode="login" />} />
       <Route path="/signup" element={user ? <Navigate to="/home" replace /> : <LoginView mode="signup" />} />
+      <Route path="/privacy" element={<PrivacyPolicyView />} />
+      <Route path="/terms" element={<TermsOfServiceView />} />
 
       {/* Protected Routes */}
       <Route path="/home" element={user ? <AuthenticatedHome /> : <Navigate to="/login" replace />} />

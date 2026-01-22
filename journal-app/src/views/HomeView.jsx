@@ -206,9 +206,9 @@ function TimelineView({ entries, onStartNew, onEdit, onDelete }) {
         <div className="flex justify-center mb-12">
           <button 
             onClick={onStartNew}
-            className="bg-journal-900 text-white w-14 h-14 rounded-full shadow-xl shadow-journal-900/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all group border-[6px] border-journal-50 z-20"
+            className="bg-journal-900 text-white w-16 h-16 rounded-full shadow-xl shadow-journal-900/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all group border-[3px] border-journal-50 z-20"
           >
-            <Plus size={28} strokeWidth={1.5} className="group-hover:rotate-90 transition-transform duration-300" />
+            <Plus size={32} strokeWidth={1.5} className="group-hover:rotate-90 transition-transform duration-300" />
           </button>
         </div>
 
@@ -406,14 +406,6 @@ function TimelineCard({ entry, onEdit, onDelete }) {
                 <h3 className="font-serif font-medium text-lg text-journal-900">
                    {weekday}
                 </h3>
-                
-                {/* Status Indicator */}
-                <div className="flex items-center gap-1.5 mt-0.5">
-                   <div className={`w-1.5 h-1.5 rounded-full ${entry.completed ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-                   <span className="text-xs text-journal-400 font-medium">
-                     {entry.completed ? "Completed" : "Draft"}
-                   </span>
-                </div>
               </div>
             </div>
 
@@ -664,7 +656,10 @@ function SettingsModal({ onClose, onSignOut }) {
 const SectionDetail = ({ title, content }) => (
   <div>
     <h4 className="text-[10px] font-bold text-journal-400 uppercase mb-1.5 tracking-widest">{title}</h4>
-    <p className="text-journal-700 leading-relaxed font-normal text-base">{content || "No entry recorded."}</p>
+    <div 
+      className="text-journal-700 leading-relaxed font-normal text-base [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5" 
+      dangerouslySetInnerHTML={{ __html: content || "No entry recorded." }} 
+    />
   </div>
 );
 

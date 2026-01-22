@@ -133,7 +133,7 @@ export default function LoginView({ mode = 'login' }) {
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
                   className="w-full mt-1 p-3 rounded-lg border border-journal-200 focus:ring-2 focus:ring-journal-accent/20 focus:border-journal-accent outline-none transition-all"
-                  placeholder="phil@avisto.com"
+                  placeholder="phil@example.com"
                 />
               </div>
 
@@ -204,7 +204,7 @@ export default function LoginView({ mode = 'login' }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full mt-1 p-3 rounded-lg border border-journal-200 focus:ring-2 focus:ring-journal-accent/20 focus:border-journal-accent outline-none transition-all"
-              placeholder="phil@avisto.com"
+              placeholder="phil@example.com"
             />
           </div>
 
