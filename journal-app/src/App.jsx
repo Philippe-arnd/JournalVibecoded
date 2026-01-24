@@ -8,10 +8,11 @@ import HomeView from './views/HomeView';
 import EntryCreationView from './views/EntryCreationView';
 import PrivacyPolicyView from './views/PrivacyPolicyView';
 import TermsOfServiceView from './views/TermsOfServiceView';
+import UpdatePasswordView from './views/UpdatePasswordView';
 import { Loader2 } from 'lucide-react';
 
 function App() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, passwordRecoveryMode } = useAuth();
   const [entries, setEntries] = useState([]);
   const [streak, setStreak] = useState(0);
   const [dataLoading, setDataLoading] = useState(false);
@@ -68,6 +69,15 @@ function App() {
     );
   }
 
+  // Force password update if in recovery mode
+  if (user && passwordRecoveryMode) {
+    return (
+      <Routes>
+        <Route path="*" element={<UpdatePasswordView />} />
+      </Routes>
+    );
+  }
+
   return (
     <Routes>
       {/* Public Routes */}
@@ -76,6 +86,7 @@ function App() {
       <Route path="/signup" element={user ? <Navigate to="/home" replace /> : <LoginView mode="signup" />} />
       <Route path="/privacy" element={<PrivacyPolicyView />} />
       <Route path="/terms" element={<TermsOfServiceView />} />
+      <Route path="/update-password" element={user ? <UpdatePasswordView /> : <Navigate to="/login" replace />} />
 
       {/* Protected Routes */}
       <Route 

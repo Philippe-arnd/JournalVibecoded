@@ -6,6 +6,7 @@ const AuthContext = createContext({});
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
 
   useEffect(() => {
     // Check active sessions
@@ -14,10 +15,18 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     });
 
+    // Check if we landed with a recovery token in the URL
+    if (window.location.hash.includes('type=recovery')) {
+      setPasswordRecoveryMode(true);
+    }
+
     // Listen for changes on auth state (login, logout, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       setLoading(false);
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecoveryMode(true);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -28,8 +37,15 @@ export const AuthProvider = ({ children }) => {
     signIn: (data) => supabase.auth.signInWithPassword(data),
     signOut: () => supabase.auth.signOut(),
     resetPassword: (email) => supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: `${window.location.origin}/login`,
     }),
+    updateUserPassword: async (newPassword) => {
+      const result = await supabase.auth.updateUser({ password: newPassword });
+      if (!result.error) {
+        setPasswordRecoveryMode(false);
+      }
+      return result;
+    },
     changePassword: async (currentPassword, newPassword) => {
       // Verify current password by re-authenticating
       const { error: authError } = await supabase.auth.signInWithPassword({
@@ -47,6 +63,7 @@ export const AuthProvider = ({ children }) => {
       });
     },
     user,
+    passwordRecoveryMode,
   };
 
   return (
