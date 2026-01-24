@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Flame } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import Logo from '../components/Logo';
 import DailysInsights from './DailysInsights';
 import PasswordInput from '../components/PasswordInput';
@@ -159,7 +160,7 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete, streak
               // Clear all local storage to ensure session is gone
               localStorage.clear();
               // Force a full page reload to clear all state
-              window.location.href = '/login';
+              window.location.href = '/';
             }}
           />
         )}
@@ -658,7 +659,7 @@ const SectionDetail = ({ title, content }) => (
     <h4 className="text-[10px] font-bold text-journal-400 uppercase mb-1.5 tracking-widest">{title}</h4>
     <div 
       className="text-journal-700 leading-relaxed font-normal text-base [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5" 
-      dangerouslySetInnerHTML={{ __html: content || "No entry recorded." }} 
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content || "No entry recorded.") }} 
     />
   </div>
 );
@@ -699,22 +700,6 @@ function DateSelectionModal({ onClose, onSelect }) {
           <div className="space-y-3">
             <button 
               onClick={() => onSelect(yesterdayStr)}
-              className="w-full flex items-center justify-between bg-journal-50 hover:bg-journal-100 p-4 rounded-xl transition-colors group border border-journal-100"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white border border-journal-100 flex items-center justify-center text-journal-400 group-hover:text-journal-900 transition-colors">
-                  <CalendarIcon size={20} strokeWidth={1.5} />
-                </div>
-                <div className="text-left">
-                  <div className="text-sm font-bold text-journal-900">Yesterday</div>
-                  <div className="text-xs text-journal-400">{yesterday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                </div>
-              </div>
-              <ChevronRight size={20} className="text-journal-300 group-hover:text-journal-900 transition-colors" />
-            </button>
-
-            <button 
-              onClick={() => onSelect(todayStr)}
               className="w-full flex items-center justify-between bg-journal-900 hover:bg-black p-4 rounded-xl transition-colors group shadow-md shadow-journal-900/20"
             >
               <div className="flex items-center gap-3">
@@ -722,11 +707,27 @@ function DateSelectionModal({ onClose, onSelect }) {
                   <Flame size={20} strokeWidth={1.5} />
                 </div>
                 <div className="text-left">
-                  <div className="text-sm font-bold text-white">Today</div>
+                  <div className="text-sm font-bold text-white">Yesterday</div>
                   <div className="text-xs text-white/60">Continue your streak</div>
                 </div>
               </div>
               <ChevronRight size={20} className="text-white/40 group-hover:text-white transition-colors" />
+            </button>
+
+            <button 
+              onClick={() => onSelect(todayStr)}
+              className="w-full flex items-center justify-between bg-journal-50 hover:bg-journal-100 p-4 rounded-xl transition-colors group border border-journal-100"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white border border-journal-100 flex items-center justify-center text-journal-400 group-hover:text-journal-900 transition-colors">
+                  <CalendarIcon size={20} strokeWidth={1.5} />
+                </div>
+                <div className="text-left">
+                  <div className="text-sm font-bold text-journal-900">Today</div>
+                  <div className="text-xs text-journal-400">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                </div>
+              </div>
+              <ChevronRight size={20} className="text-journal-300 group-hover:text-journal-900 transition-colors" />
             </button>
           </div>
         </div>

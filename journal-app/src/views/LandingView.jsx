@@ -310,6 +310,32 @@ export default function LandingView() {
         </div>
       </section>
 
+      {/* Customer Feedback */}
+      <section className="py-24 bg-white border-t border-journal-200">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+           <div className="mb-10">
+              <div className="flex justify-center gap-1 mb-4">
+                 {[1, 2, 3, 4, 5].map((i) => (
+                    <Star key={i} size={20} className="text-orange-400 fill-orange-400" />
+                 ))}
+              </div>
+              <h2 className="text-2xl md:text-3xl font-serif font-medium text-journal-900 leading-relaxed italic">
+                "The only journaling app that actually stuck. It fits perfectly with my Miracle Morning routine—short, focused, and impactful."
+              </h2>
+           </div>
+           
+           <div className="flex items-center justify-center gap-4">
+              <div className="w-12 h-12 bg-journal-100 rounded-full flex items-center justify-center text-journal-500 font-bold text-lg">
+                 SJ
+              </div>
+              <div className="text-left">
+                 <div className="font-bold text-journal-900">Sarah J.</div>
+                 <div className="text-sm text-journal-500">Product Manager</div>
+              </div>
+           </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-24 bg-journal-900 text-white relative overflow-hidden">
         {/* Abstract Background Shapes */}

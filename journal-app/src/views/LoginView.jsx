@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '../components/Logo';
 import PasswordInput from '../components/PasswordInput';
 import PasswordConfirmation from '../components/PasswordConfirmation';
@@ -17,7 +18,14 @@ export default function LoginView({ mode = 'login' }) {
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const { signIn, signUp, resetPassword } = useAuth();
+
+  // Reset success state when switching between login/signup
+  useEffect(() => {
+    setSignupSuccess(false);
+    setError('');
+  }, [mode]);
 
   // Calculate password strength for validation
   const calculatePasswordStrength = (pwd) => {
@@ -60,6 +68,7 @@ export default function LoginView({ mode = 'login' }) {
           setError(signUpError.message);
         } else {
           setError('');
+          setSignupSuccess(true);
           // Clear form on success
           setEmail('');
           setPassword('');
@@ -194,73 +203,107 @@ export default function LoginView({ mode = 'login' }) {
           A space for your morning reflection.
         </p>
 
-        <form onSubmit={handleAuth} className="space-y-5">
-          {/* Email Input */}
-          <div>
-            <label className="text-sm font-medium text-journal-800 ml-1">Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full mt-1 p-3 rounded-lg border border-journal-200 focus:ring-2 focus:ring-journal-accent/20 focus:border-journal-accent outline-none transition-all"
-              placeholder="phil@example.com"
-            />
-          </div>
-
-          {/* Password Input */}
-          {isSignUp ? (
-            <PasswordConfirmation
-              password={password}
-              confirmPassword={confirmPassword}
-              onPasswordChange={setPassword}
-              onConfirmPasswordChange={setConfirmPassword}
-              showStrength={true}
-            />
-          ) : (
-            <PasswordInput
-              value={password}
-              onChange={setPassword}
-              showStrength={false}
-              showRequirements={false}
-            />
-          )}
-
-          {/* Forgot Password Link (Sign In only) */}
-          {!isSignUp && (
-            <button
-              type="button"
-              onClick={() => setShowPasswordReset(true)}
-              className="text-sm text-journal-600 hover:text-journal-900 transition-colors font-medium -mt-2"
+        <AnimatePresence mode="wait">
+          {signupSuccess ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 text-center space-y-4 mb-6"
             >
-              Forgot password?
-            </button>
-          )}
+              <div className="flex justify-center">
+                <div className="bg-white p-3 rounded-full shadow-sm">
+                  <Mail className="text-emerald-500" size={32} />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-emerald-900 mb-1">Verify your email</h3>
+                <p className="text-emerald-800/70 text-sm">
+                  We've sent a confirmation link to your email. Please check your inbox and follow the link to complete your signup.
+                </p>
+              </div>
+              <Link
+                to="/login"
+                className="inline-block text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors"
+              >
+                Back to Sign In
+              </Link>
+            </motion.div>
+          ) : (
+            <motion.form
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onSubmit={handleAuth}
+              className="space-y-5"
+            >
+              {/* Email Input */}
+              <div>
+                <label className="text-sm font-medium text-journal-800 ml-1">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full mt-1 p-3 rounded-lg border border-journal-200 focus:ring-2 focus:ring-journal-accent/20 focus:border-journal-accent outline-none transition-all"
+                  placeholder="phil@example.com"
+                />
+              </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-              {error}
-            </div>
-          )}
+              {/* Password Input */}
+              {isSignUp ? (
+                <PasswordConfirmation
+                  password={password}
+                  confirmPassword={confirmPassword}
+                  onPasswordChange={setPassword}
+                  onConfirmPasswordChange={setConfirmPassword}
+                  showStrength={true}
+                />
+              ) : (
+                <PasswordInput
+                  value={password}
+                  onChange={setPassword}
+                  showStrength={false}
+                  showRequirements={false}
+                />
+              )}
 
-          {/* Submit Button */}
-          <button
-            disabled={loading || (isSignUp ? !isSignUpValid : !isSignInValid)}
-            className="w-full bg-journal-900 text-white p-3 rounded-lg font-medium hover:bg-black transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" size={20} />
-                {isSignUp ? 'Creating account...' : 'Signing in...'}
-              </>
-            ) : isSignUp ? (
-              'Sign Up'
-            ) : (
-              'Sign In'
-            )}
-          </button>
-        </form>
+              {/* Forgot Password Link (Sign In only) */}
+              {!isSignUp && (
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordReset(true)}
+                  className="text-sm text-journal-600 hover:text-journal-900 transition-colors font-medium -mt-2"
+                >
+                  Forgot password?
+                </button>
+              )}
+
+              {/* Error Message */}
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+                  {error}
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <button
+                disabled={loading || (isSignUp ? !isSignUpValid : !isSignInValid)}
+                className="w-full bg-journal-900 text-white p-3 rounded-lg font-medium hover:bg-black transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin" size={20} />
+                    {isSignUp ? 'Creating account...' : 'Signing in...'}
+                  </>
+                ) : isSignUp ? (
+                  'Sign Up'
+                ) : (
+                  'Sign In'
+                )}
+              </button>
+            </motion.form>
+          )}
+        </AnimatePresence>
 
         {/* Toggle Auth Mode */}
         <Link

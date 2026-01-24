@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Quote, ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import { INSIGHTS_LIBRARY } from '../data/insights';
+import { getInsightIcon, getInsightTheme } from '../utils/insightUtils';
 
 export default function DailysInsights() {
   const [insightsStack, setInsightsStack] = useState([]);
@@ -71,6 +72,7 @@ export default function DailysInsights() {
           const rotate = offset % 2 === 0 ? -2 : 2;
           const translateY = offset * 8;
           const scale = 1 - offset * 0.05;
+          const item = insightsStack[index];
 
           return (
             <div
@@ -83,7 +85,7 @@ export default function DailysInsights() {
               }}
             >
                <div className="absolute -top-4 -right-4 text-journal-50 opacity-50">
-                  <Quote size={120} />
+                  {getInsightIcon(item.type, 120)}
                 </div>
             </div>
           );
@@ -114,13 +116,30 @@ export default function DailysInsights() {
               className="absolute w-full bg-white rounded-3xl shadow-xl border border-journal-100 h-full z-10 overflow-hidden cursor-grab active:cursor-grabbing"
             >
               <div className="absolute -top-4 -right-4 text-journal-50 opacity-50">
-                <Quote size={120} />
+                {getInsightIcon(insightsStack[currentIndex].type, 120)}
               </div>
               
               <div className="relative z-10 flex flex-col h-full p-8">
+                {/* Type Indicator */}
+                <div className="flex flex-col items-center mb-6">
+                  {(() => {
+                    const theme = getInsightTheme(insightsStack[currentIndex].type);
+                    return (
+                      <>
+                        <div className={`p-3 rounded-full mb-2 ${theme.bg}`}>
+                          {getInsightIcon(insightsStack[currentIndex].type, 24, theme.color)}
+                        </div>
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${theme.color}`}>
+                          {theme.label}
+                        </span>
+                      </>
+                    );
+                  })()}
+                </div>
+
                 <div className="flex-1 flex items-center justify-center">
                   <p className="text-xl md:text-2xl font-serif text-journal-900 leading-relaxed italic text-center">
-                    "{insightsStack[currentIndex]}"
+                    "{insightsStack[currentIndex].text}"
                   </p>
                 </div>
                 

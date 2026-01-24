@@ -12,43 +12,14 @@ import { Loader2 } from 'lucide-react';
 
 function App() {
   const { user, loading: authLoading } = useAuth();
-
-  // Render Loading
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-journal-50">
-        <Loader2 className="animate-spin text-journal-900" size={40} />
-      </div>
-    );
-  }
-
-  return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={user ? <Navigate to="/home" replace /> : <LandingView />} />
-      <Route path="/login" element={user ? <Navigate to="/home" replace /> : <LoginView mode="login" />} />
-      <Route path="/signup" element={user ? <Navigate to="/home" replace /> : <LoginView mode="signup" />} />
-      <Route path="/privacy" element={<PrivacyPolicyView />} />
-      <Route path="/terms" element={<TermsOfServiceView />} />
-
-      {/* Protected Routes */}
-      <Route path="/home" element={user ? <AuthenticatedHome /> : <Navigate to="/login" replace />} />
-      <Route path="/create" element={user ? <AuthenticatedCreate /> : <Navigate to="/login" replace />} />
-    </Routes>
-  );
-}
-
-// Component for authenticated home route
-function AuthenticatedHome() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const [entries, setEntries] = useState([]);
   const [streak, setStreak] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
 
-  const loadData = async () => {
+  // Centralized Data Loading
+  const loadData = async (background = false) => {
     if (!user) return;
-    setLoading(true);
+    if (!background && entries.length === 0) setDataLoading(true);
 
     try {
       // 1. Fetch Entries
@@ -75,13 +46,76 @@ function AuthenticatedHome() {
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
-      setLoading(false);
+      if (!background) setDataLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    if (user) {
+      loadData();
+    } else {
+      setEntries([]);
+      setStreak(0);
+    }
   }, [user]);
+
+  // Render Loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-journal-50">
+        <Loader2 className="animate-spin text-journal-900" size={40} />
+      </div>
+    );
+  }
+
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/" element={user ? <Navigate to="/home" replace /> : <LandingView />} />
+      <Route path="/login" element={user ? <Navigate to="/home" replace /> : <LoginView mode="login" />} />
+      <Route path="/signup" element={user ? <Navigate to="/home" replace /> : <LoginView mode="signup" />} />
+      <Route path="/privacy" element={<PrivacyPolicyView />} />
+      <Route path="/terms" element={<TermsOfServiceView />} />
+
+      {/* Protected Routes */}
+      <Route 
+        path="/home" 
+        element={
+          user ? (
+            <AuthenticatedHome 
+              entries={entries} 
+              streak={streak} 
+              refreshData={() => loadData(true)} 
+              loading={dataLoading} 
+            />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        } 
+      />
+      <Route 
+        path="/create" 
+        element={
+          user ? (
+            <AuthenticatedCreate onDataUpdate={() => loadData(true)} />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        } 
+      />
+    </Routes>
+  );
+}
+
+// Component for authenticated home route
+function AuthenticatedHome({ entries, streak, refreshData, loading }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Refresh data in background on mount
+  useEffect(() => {
+    refreshData();
+  }, []);
 
   const handleStartNew = (options = {}) => {
     const { entry_date } = options;
@@ -110,7 +144,7 @@ function AuthenticatedHome() {
           .eq('id', id);
 
         if (error) throw error;
-        await loadData();
+        await refreshData();
       } catch (error) {
         console.error('Failed to delete:', error);
         alert('Failed to delete entry: ' + error.message);
@@ -118,7 +152,8 @@ function AuthenticatedHome() {
     }
   };
 
-  if (loading) {
+  // Only show full screen loader if we have NO data and are loading
+  if (loading && entries.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-journal-50">
         <Loader2 className="animate-spin text-journal-900" size={40} />
@@ -140,12 +175,13 @@ function AuthenticatedHome() {
 }
 
 // Component for authenticated create route
-function AuthenticatedCreate() {
+function AuthenticatedCreate({ onDataUpdate }) {
   const navigate = useNavigate();
   const location = useLocation();
   const selectedEntry = location.state?.entry;
 
   const handleEntryFinish = () => {
+    onDataUpdate(); // Refresh data before navigating back
     navigate('/home');
   };
 

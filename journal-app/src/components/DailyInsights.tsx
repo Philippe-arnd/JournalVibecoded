@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, X, Sparkles, Clock } from 'lucide-react';
+import { ArrowRight, X, Clock } from 'lucide-react';
 import { INSIGHTS_LIBRARY } from '../data/insights';
+import { getInsightIcon, getInsightTheme } from '../utils/insightUtils';
 
 interface DailyInsightsProps {
   onComplete: () => void; // Function to call when insights are done
 }
 
+interface Insight {
+  text: string;
+  type: string;
+}
+
 export default function DailyInsights({ onComplete }: DailyInsightsProps) {
-  const [insights, setInsights] = useState<string[]>([]);
+  const [insights, setInsights] = useState<Insight[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30); // 30s timer for the last slide
   const [animKey, setAnimKey] = useState(0);
@@ -77,14 +83,52 @@ export default function DailyInsights({ onComplete }: DailyInsightsProps) {
 
       {/* Main Content Area */}
       <div key={animKey} className="max-w-xl w-full animate-slide-up">
-        <div className="mb-6 flex justify-center">
-          <div className="w-12 h-12 bg-orange-50 text-accent rounded-full flex items-center justify-center">
-             <Sparkles size={24} />
-          </div>
+        <div className="mb-6 flex flex-col items-center">
+          {(() => {
+            const theme = getInsightTheme(insights[currentIndex].type);
+            return (
+              <>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${theme.bg} ${theme.color}`}>
+                   {getInsightIcon(insights[currentIndex].type, 24)}
+                </div>
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${theme.color}`}>
+                  {theme.label}
+                </span>
+              </>
+            );
+          })()}
         </div>
 
         <h2 className="text-3xl md:text-4xl font-serif font-bold text-ink mb-8 leading-tight">
-          "{insights[currentIndex]}"
+          "{insights[currentIndex].text}"
+        </h2>
+
+        {/* Footer Actions */}
+        <div className="mt-12 flex flex-col items-center gap-4">
+          
+          <button
+            onClick={handleNext}
+            className="group flex items-center gap-3 bg-ink hover:bg-black text-white px-8 py-3 rounded-full font-medium transition-all hover:scale-105"
+          >
+            {currentIndex === 2 ? 'Start Journaling' : 'Next Insight'}
+            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+          </button>
+
+          {/* Countdown for Last Slide */}
+          {currentIndex === 2 && (
+            <div className="text-sm text-subtle flex items-center gap-1 animate-pulse">
+              <Clock size={14} />
+              <span>Auto-closing in {timeLeft}s</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+        <h2 className="text-3xl md:text-4xl font-serif font-bold text-ink mb-8 leading-tight">
+          "{insights[currentIndex].text}"
         </h2>
 
         {/* Footer Actions */}
