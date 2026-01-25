@@ -1,4 +1,4 @@
-import { Plus, ChevronDown, Trash2, Edit2, Calendar as CalendarIcon, List, Settings, LogOut, Lock, X, ChevronLeft, ChevronRight, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, ChevronDown, Trash2, Edit2, Calendar as CalendarIcon, List, Settings, LogOut, Lock, X, ChevronLeft, ChevronRight, Sparkles, Loader2, Snowflake } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -17,52 +17,90 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete, streak
   const [showSettings, setShowSettings] = useState(false);
   const [showDateSelection, setShowDateSelection] = useState(false);
 
-  const calculatedStreak = useMemo(() => {
-    if (!entries || entries.length === 0) return 0;
-    
-    const completedEntries = entries.filter(e => e.completed);
-    if (completedEntries.length === 0) return 0;
+  // Helper for local YYYY-MM-DD
+  const getLocalDateStr = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
-    const entryDates = new Set(completedEntries.map(e => e.entry_date.split('T')[0]));
+  const { streakCount, isAtRisk } = useMemo(() => {
+    if (!entries || entries.length === 0) return { streakCount: 0, isAtRisk: false };
+    
+    // Log raw entries for one final check on why 23/24 are missing
+    console.log('Raw entries dates:', entries.map(e => ({ date: e.entry_date, comp: e.completed })));
+
+    // Parse all entries into a set of YYYY-MM-DD
+    const entryDates = new Set(entries.map(e => e.entry_date.split('T')[0]));
+    
+    const getLocalDateStr = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getLocalDateStr(today);
     
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayStr = getLocalDateStr(yesterday);
 
-    let streakCount = 0;
-    let checkDate = new Date(today);
+    const dayBeforeYesterday = new Date(yesterday);
+    dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 1);
+    const dayBeforeYesterdayStr = getLocalDateStr(dayBeforeYesterday);
 
-    // Determine start date for check
-    if (entryDates.has(todayStr)) {
-      // Streak continues from today
-    } else if (entryDates.has(yesterdayStr)) {
-      // Streak continues from yesterday
+    const hasToday = entryDates.has(todayStr);
+    const hasYesterday = entryDates.has(yesterdayStr);
+    const hasDayBefore = entryDates.has(dayBeforeYesterdayStr);
+
+    let count = 0;
+    let checkDate;
+
+    if (hasToday) {
+      checkDate = today;
+    } else if (hasYesterday) {
       checkDate = yesterday;
+    } else if (hasDayBefore) {
+      checkDate = dayBeforeYesterday;
     } else {
-      return 0;
+      return { streakCount: 0, isAtRisk: false };
     }
 
-    // Count backwards
+    const tempDate = new Date(checkDate);
     while (true) {
-      const dateStr = checkDate.toISOString().split('T')[0];
+      const dateStr = getLocalDateStr(tempDate);
       if (entryDates.has(dateStr)) {
-        streakCount++;
-        checkDate.setDate(checkDate.getDate() - 1);
+        count++;
+        tempDate.setDate(tempDate.getDate() - 1);
       } else {
         break;
       }
     }
-    return streakCount;
+
+    return { 
+      streakCount: count, 
+      isAtRisk: !hasToday
+    };
   }, [entries]);
 
   const handleStartNewClick = () => {
+    const todayStr = getLocalDateStr(new Date());
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayStr = getLocalDateStr(yesterday);
     
-    const hasYesterday = entries.some(e => e.entry_date === yesterdayStr);
+    const hasYesterday = entries.some(e => e.entry_date.split('T')[0] === yesterdayStr);
+    const hasToday = entries.some(e => e.entry_date.split('T')[0] === todayStr);
+
+    if (hasToday) {
+      // If today exists, we might still want to allow starting a new one? 
+      // Existing logic just calls onStartNew()
+      onStartNew();
+      return;
+    }
     
     if (!hasYesterday) {
       setShowDateSelection(true);
@@ -86,25 +124,43 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete, streak
             <h1 className="text-3xl font-serif font-medium text-journal-900">My Journal</h1>
           </div>
           
-          <div className="flex items-center gap-3 mt-2">
-            <p className="text-journal-500 text-lg font-light">Consistency is the key.</p>
+          <div className="flex items-center gap-2 mt-2 flex-nowrap min-w-0">
+            <p className="text-journal-500 text-sm sm:text-base md:text-lg font-light whitespace-nowrap overflow-hidden text-ellipsis min-w-0">
+              Consistency is the key.
+            </p>
             
             {/* Streak Badge */}
-            {calculatedStreak > 0 && (
-              <div className="flex items-center gap-1.5 bg-orange-100 text-orange-600 px-3 py-1 rounded-full border border-orange-200 shadow-sm animate-in fade-in slide-in-from-left-4 duration-700">
-                <Flame size={16} fill="currentColor" strokeWidth={1} />
-                <span className="text-sm font-bold">{calculatedStreak} Day{calculatedStreak > 1 ? 's' : ''}</span>
+            {streakCount > 0 && (
+              <div className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full border shadow-sm animate-in fade-in slide-in-from-left-4 duration-700 whitespace-nowrap ${
+                isAtRisk 
+                  ? 'bg-blue-50 text-blue-500 border-blue-100' 
+                  : 'bg-orange-100 text-orange-600 border-orange-200'
+              }`}>
+                {isAtRisk ? (
+                  <Snowflake size={16} strokeWidth={2.5} className="animate-pulse" />
+                ) : (
+                  <Flame size={16} fill="currentColor" strokeWidth={1} />
+                )}
+                <span className="text-sm font-bold">{streakCount} Day{streakCount > 1 ? 's' : ''}</span>
               </div>
             )}
           </div>
         </div>
 
-        <button 
-          onClick={() => setShowSettings(true)} 
-          className="text-journal-400 hover:text-journal-600 p-2 rounded-full hover:bg-journal-100 transition-colors"
-        >
-          <Settings size={24} strokeWidth={1.5} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={() => setViewMode('calendar')} 
+            className={`p-2 rounded-full transition-colors ${viewMode === 'calendar' ? 'text-journal-900 bg-journal-100' : 'text-journal-400 hover:text-journal-600 hover:bg-journal-100'}`}
+          >
+            <CalendarIcon size={24} strokeWidth={1.5} />
+          </button>
+          <button 
+            onClick={() => setShowSettings(true)} 
+            className="text-journal-400 hover:text-journal-600 p-2 rounded-full hover:bg-journal-100 transition-colors"
+          >
+            <Settings size={24} strokeWidth={1.5} />
+          </button>
+        </div>
       </header>
 
       {/* View Switcher */}
@@ -138,6 +194,13 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete, streak
           <TimelineView 
             entries={entries} 
             onStartNew={handleStartNewClick} 
+            onEdit={onEdit} 
+            onDelete={onDelete} 
+          />
+        ) : viewMode === 'calendar' ? (
+          <CalendarView 
+            entries={entries} 
+            onStartNew={onStartNew} 
             onEdit={onEdit} 
             onDelete={onDelete} 
           />
@@ -259,18 +322,18 @@ function TimelineView({ entries, onStartNew, onEdit, onDelete }) {
 
 function CalendarView({ entries, onStartNew, onEdit, onDelete }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedEntryId, setSelectedEntryId] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
 
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
 
   const prevMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-    setSelectedEntryId(null);
+    setSelectedDate(null);
   };
   const nextMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-    setSelectedEntryId(null);
+    setSelectedDate(null);
   };
 
   const monthEntries = entries.filter(entry => {
@@ -285,7 +348,12 @@ function CalendarView({ entries, onStartNew, onEdit, onDelete }) {
     return acc;
   }, {});
 
-  const selectedEntry = selectedEntryId ? entries.find(e => e.id === selectedEntryId) : null;
+  const selectedEntry = selectedDate ? entriesByDay[selectedDate.getDate()] : null;
+
+  const handleDayClick = (day) => {
+    const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    setSelectedDate(newDate);
+  };
 
   return (
     <div className="max-w-xl mx-auto pb-20">
@@ -319,23 +387,20 @@ function CalendarView({ entries, onStartNew, onEdit, onDelete }) {
             const isToday = new Date().getDate() === day && 
                            new Date().getMonth() === currentDate.getMonth() && 
                            new Date().getFullYear() === currentDate.getFullYear();
-            const isSelected = selectedEntryId === entry?.id;
+            const isSelected = selectedDate?.getDate() === day;
             
             return (
               <div key={day} className="flex flex-col items-center gap-1">
                 <button
-                  onClick={() => entry && setSelectedEntryId(isSelected ? null : entry.id)}
-                  disabled={!entry}
+                  onClick={() => handleDayClick(day)}
                   className={`
                     w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all relative
-                    ${isSelected ? 'bg-journal-900 text-white scale-110 shadow-lg z-10' : isToday ? 'bg-journal-900 text-white shadow-md' : 'text-journal-700 hover:bg-journal-50'}
-                    ${entry ? (entry.completed ? 'ring-2 ring-emerald-400/50' : 'ring-2 ring-amber-400/50') : ''}
-                    ${!entry && !isToday ? 'opacity-50' : ''}
+                    ${isSelected ? 'bg-journal-900 text-white scale-110 shadow-lg z-10' : isToday ? 'border-2 border-journal-900 text-journal-900' : 'text-journal-700 hover:bg-journal-50'}
                   `}
                 >
                   {day}
                   {entry && (
-                    <div className={`absolute -bottom-1 w-1 h-1 rounded-full ${entry.completed ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                    <div className={`absolute -bottom-1 w-1.5 h-1.5 rounded-full bg-emerald-500`} />
                   )}
                 </button>
               </div>
@@ -345,25 +410,31 @@ function CalendarView({ entries, onStartNew, onEdit, onDelete }) {
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between px-2">
-          <h3 className="text-xs font-bold text-journal-400 uppercase tracking-widest">
-            {selectedEntry ? 'Selected Entry' : 'Entries'}
-          </h3>
-          {selectedEntry && (
-            <button onClick={() => setSelectedEntryId(null)} className="text-xs text-journal-500 hover:text-journal-900">View All</button>
-          )}
-        </div>
-        {selectedEntry ? (
-          <TimelineCard key={selectedEntry.id} entry={selectedEntry} onEdit={onEdit} onDelete={onDelete} />
-        ) : monthEntries.length > 0 ? (
-          monthEntries
-            .sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date))
-            .map(entry => (
-              <TimelineCard key={entry.id} entry={entry} onEdit={onEdit} onDelete={onDelete} />
-            ))
+        {selectedDate ? (
+          <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center justify-between px-2 mb-4">
+              <h3 className="text-xs font-bold text-journal-400 uppercase tracking-widest">
+                {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </h3>
+            </div>
+            
+            {selectedEntry ? (
+              <TimelineCard key={selectedEntry.id} entry={selectedEntry} onEdit={onEdit} onDelete={onDelete} />
+            ) : (
+              <div className="bg-white rounded-3xl p-12 border border-journal-100 border-dashed text-center flex flex-col items-center">
+                <p className="text-journal-400 mb-8 font-light">No entry for this day.</p>
+                <button 
+                  onClick={() => onStartNew({ entry_date: selectedDate.toISOString().split('T')[0] })}
+                  className="bg-journal-900 text-white w-16 h-16 rounded-full shadow-xl shadow-journal-900/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all group border-[3px] border-white z-20"
+                >
+                  <Plus size={32} strokeWidth={1.5} className="group-hover:rotate-90 transition-transform duration-300" />
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
-          <div className="text-center py-12 bg-white/50 rounded-3xl border border-journal-100 border-dashed">
-            <p className="text-journal-400 font-light">No entries for this month.</p>
+          <div className="text-center py-12">
+            <p className="text-journal-400 font-light">Select a day to view or create an entry.</p>
           </div>
         )}
       </div>
@@ -658,7 +729,7 @@ const SectionDetail = ({ title, content }) => (
   <div>
     <h4 className="text-[10px] font-bold text-journal-400 uppercase mb-1.5 tracking-widest">{title}</h4>
     <div 
-      className="text-journal-700 leading-relaxed font-normal text-base [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5" 
+      className="text-journal-700 leading-relaxed font-normal text-base [&_ul]:list-disc [&_ul_ul]:list-[circle] [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5" 
       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content || "No entry recorded.") }} 
     />
   </div>

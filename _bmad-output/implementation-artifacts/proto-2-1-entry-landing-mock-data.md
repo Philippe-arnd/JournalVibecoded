@@ -2,7 +2,7 @@
 
 **Story ID:** proto-2-1-entry-landing-mock-data
 **Epic:** Prototype Phase - Interactive UI/UX Validation
-**Status:** ready-for-dev
+**Status:** done
 **Type:** Feature
 **Estimate:** 2-3 hours
 **Depends On:** proto-1-6-design-system-visual-foundation ✅
@@ -379,6 +379,6 @@ proto-2-2-2-5 will implement the full 4-section flow navigation with "Next Secti
 
 ## Status
 
-**Current Status:** review
+**Current Status:** done
 **Next Story:** proto-2-2-2-5-four-section-flow
 **Date Completed:** 2026-01-17

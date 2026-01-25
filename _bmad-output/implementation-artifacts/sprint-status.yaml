@@ -56,13 +56,13 @@ development_status:
   # Success: User can complete full journaling flow, view timeline, see AI feedback (mocked)
 
   prototype-phase: in-progress
-  proto-1-1-project-setup-ui-foundation: review
-  proto-1-6-design-system-visual-foundation: review
-  proto-2-1-entry-landing-mock-data: review
-  proto-2-2-2-5-four-section-flow: review
-  proto-2-6-auto-save-ui-indicators: review
-  proto-2-7-mobile-responsive-testing: review
-  proto-3-2-ai-encouragement-display-mock: review
+  proto-1-1-project-setup-ui-foundation: done
+  proto-1-6-design-system-visual-foundation: done
+  proto-2-1-entry-landing-mock-data: done
+  proto-2-2-2-5-four-section-flow: done
+  proto-2-6-auto-save-ui-indicators: done
+  proto-2-7-mobile-responsive-testing: done
+  proto-3-2-ai-encouragement-display-mock: done
   proto-3-3-pattern-recognition-display-mock: backlog
   proto-3-5-progress-bar-ui: backlog
   proto-3-6-streak-badge-display: backlog

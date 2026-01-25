@@ -103,8 +103,17 @@ const RichTextEditor = ({ value, onChange, placeholder }) => {
 export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Helper for local YYYY-MM-DD
+  const getLocalDateStr = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [entryData, setEntryData] = useState({
-    entry_date: initialEntry?.entry_date || new Date().toISOString().split('T')[0],
+    entry_date: initialEntry?.entry_date || getLocalDateStr(new Date()),
     professional_recap: initialEntry?.professional_recap || '',
     personal_recap: initialEntry?.personal_recap || '',
     learning_reflections: initialEntry?.learning_reflections || '',
@@ -284,7 +293,12 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <span className="text-sm font-bold text-journal-300 uppercase tracking-widest">
-                    {new Date(entryData.entry_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}
+                    {new Date(entryData.entry_date + 'T00:00:00').toLocaleDateString('en-US', { 
+                      weekday: 'long',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
                   </span>
                 </div>
               </div>
