@@ -10,20 +10,20 @@ import DailysInsights from './DailysInsights';
 import PasswordInput from '../components/PasswordInput';
 import PasswordConfirmation from '../components/PasswordConfirmation';
 
+// Helper for local YYYY-MM-DD
+const getLocalDateStr = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function HomeView({ onStartNew, entries, onEdit, onDelete, streak }) {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('timeline');
   const [showSettings, setShowSettings] = useState(false);
   const [showDateSelection, setShowDateSelection] = useState(false);
-
-  // Helper for local YYYY-MM-DD
-  const getLocalDateStr = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
 
   const { streakCount, isAtRisk } = useMemo(() => {
     if (!entries || entries.length === 0) return { streakCount: 0, isAtRisk: false };
@@ -33,13 +33,6 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete, streak
 
     // Parse all entries into a set of YYYY-MM-DD
     const entryDates = new Set(entries.map(e => e.entry_date.split('T')[0]));
-    
-    const getLocalDateStr = (date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
 
     const today = new Date();
     const todayStr = getLocalDateStr(today);
@@ -82,7 +75,7 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete, streak
 
     return { 
       streakCount: count, 
-      isAtRisk: !hasToday
+      isAtRisk: !hasToday && !hasYesterday
     };
   }, [entries]);
 
@@ -424,7 +417,7 @@ function CalendarView({ entries, onStartNew, onEdit, onDelete }) {
               <div className="bg-white rounded-3xl p-12 border border-journal-100 border-dashed text-center flex flex-col items-center">
                 <p className="text-journal-400 mb-8 font-light">No entry for this day.</p>
                 <button 
-                  onClick={() => onStartNew({ entry_date: selectedDate.toISOString().split('T')[0] })}
+                  onClick={() => onStartNew({ entry_date: getLocalDateStr(selectedDate) })}
                   className="bg-journal-900 text-white w-16 h-16 rounded-full shadow-xl shadow-journal-900/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all group border-[3px] border-white z-20"
                 >
                   <Plus size={32} strokeWidth={1.5} className="group-hover:rotate-90 transition-transform duration-300" />
@@ -738,8 +731,8 @@ const SectionDetail = ({ title, content }) => (
 function DateSelectionModal({ onClose, onSelect }) {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-  const todayStr = new Date().toISOString().split('T')[0];
+  const yesterdayStr = getLocalDateStr(yesterday);
+  const todayStr = getLocalDateStr(new Date());
 
   return (
     <motion.div 
