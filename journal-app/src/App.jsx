@@ -175,28 +175,6 @@ function AuthenticatedHome({ entries, streak, refreshData, loading }) {
   );
 }
 
-  // Only show full screen loader if we have NO data and are loading
-  if (loading && entries.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-journal-50">
-        <Loader2 className="animate-spin text-journal-900" size={40} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-journal-50 font-sans text-journal-900">
-      <HomeView
-        entries={entries}
-        streak={streak}
-        onStartNew={handleStartNew}
-        onEdit={handleEditEntry}
-        onDelete={handleDeleteEntry}
-      />
-    </div>
-  );
-}
-
 // Component for authenticated create route
 function AuthenticatedCreate({ onDataUpdate }) {
   const navigate = useNavigate();
