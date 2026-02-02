@@ -1,5 +1,7 @@
-import { supabase } from '../lib/supabase';
 import { encrypt, decrypt } from '../utils/encryption';
+
+const VITE_API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_URL = `${VITE_API_URL}/api`;
 
 const SENSITIVE_FIELDS = [
   'professional_recap',
@@ -10,19 +12,50 @@ const SENSITIVE_FIELDS = [
   'ai_cited_entries'
 ];
 
+async function apiRequest(endpoint, options = {}) {
+    const res = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        },
+        credentials: 'include'
+    });
+    if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.message || `API Error: ${res.statusText}`);
+    }
+    return res.json();
+}
+
+// Helper to map camelCase (server) to snake_case (client legacy)
+function toClientEntry(serverEntry) {
+    if (!serverEntry) return null;
+    return {
+        id: serverEntry.id,
+        user_id: serverEntry.userId,
+        entry_date: serverEntry.entryDate,
+        professional_recap: serverEntry.professionalRecap,
+        personal_recap: serverEntry.personalRecap,
+        learning_reflections: serverEntry.learningReflections,
+        gratitude: serverEntry.gratitude,
+        ai_feedback: serverEntry.aiFeedback,
+        ai_cited_entries: serverEntry.aiCitedEntries,
+        created_at: serverEntry.createdAt,
+        updated_at: serverEntry.updatedAt
+    };
+}
+
 export const entryService = {
   // READ: Get all entries for the current user
   async getEntries() {
-    const { data, error } = await supabase
-      .from('entries')
-      .select('*')
-      .order('entry_date', { ascending: false });
-    
-    if (error) throw error;
+    const data = await apiRequest('/entries');
     
     // Decrypt sensitive fields
-    return data.map(entry => {
+    return data.map(serverEntry => {
+      const entry = toClientEntry(serverEntry);
       const decryptedEntry = { ...entry };
+      
       SENSITIVE_FIELDS.forEach(field => {
         if (decryptedEntry[field]) {
           const decryptedValue = decrypt(decryptedEntry[field]);
@@ -44,18 +77,13 @@ export const entryService = {
 
   // READ: Get today's entry if it exists
   async getTodayEntry() {
-    const today = new Date().toISOString().split('T')[0];
-    const { data, error } = await supabase
-      .from('entries')
-      .select('*')
-      .eq('entry_date', today)
-      .maybeSingle();
-    
-    if (error) throw error;
-    if (!data) return data;
+    const data = await apiRequest('/entries/today');
+    if (!data) return null;
+
+    const entry = toClientEntry(data);
 
     // Decrypt sensitive fields
-    const decryptedEntry = { ...data };
+    const decryptedEntry = { ...entry };
     SENSITIVE_FIELDS.forEach(field => {
       if (decryptedEntry[field]) {
         const decryptedValue = decrypt(decryptedEntry[field]);
@@ -76,11 +104,7 @@ export const entryService = {
 
   // CREATE / UPDATE: Save entry data
   async saveEntry(entryData) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
-
     const today = new Date().toISOString().split('T')[0];
-    // Use provided date or default to today
     const entryDate = entryData.entry_date || today;
 
     // Encrypt sensitive fields
@@ -96,21 +120,18 @@ export const entryService = {
       }
     });
 
-    const { data, error } = await supabase
-      .from('entries')
-      .upsert({ 
-        user_id: user.id, 
-        entry_date: entryDate, 
-        ...encryptedData, 
-        updated_at: new Date() 
-      }, { onConflict: 'user_id, entry_date' })
-      .select()
-      .single();
+    const data = await apiRequest('/entries', {
+        method: 'POST',
+        body: JSON.stringify({
+            entry_date: entryDate,
+            ...encryptedData
+        })
+    });
 
-    if (error) throw error;
+    const entry = toClientEntry(data);
 
     // Decrypt before returning
-    const decryptedData = { ...data };
+    const decryptedData = { ...entry };
     SENSITIVE_FIELDS.forEach(field => {
       if (decryptedData[field]) {
         const decryptedValue = decrypt(decryptedData[field]);
@@ -131,11 +152,8 @@ export const entryService = {
 
   // DELETE: Delete an entry by ID
   async deleteEntry(id) {
-    const { error } = await supabase
-      .from('entries')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
+    await apiRequest(`/entries/${id}`, {
+        method: 'DELETE'
+    });
   },
 };

@@ -1,7 +1,42 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+.vercel
+.output/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS / Editors
+.DS_Store
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*.code-workspace
+
 # AI / Tools
 .claude/
 _bmad/
-.env
 gemini.md
 .gemini/
-*.code-workspace
+
+# Docker
+.dockerignore
+# (Usually we don't ignore docker-compose.yml or Dockerfiles)

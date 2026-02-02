@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from './lib/supabase';
 import { useAuth } from './contexts/AuthContext';
 import { entryService } from './services/entryService';
 import LandingView from './views/LandingView';
@@ -11,6 +10,43 @@ import PrivacyPolicyView from './views/PrivacyPolicyView';
 import TermsOfServiceView from './views/TermsOfServiceView';
 import UpdatePasswordView from './views/UpdatePasswordView';
 import { Loader2 } from 'lucide-react';
+
+// Helper to calculate streak from entries
+function calculateStreak(entries) {
+  if (!entries || entries.length === 0) return 0;
+
+  // Entries are sorted by date desc
+  const today = new Date().toISOString().split('T')[0];
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = yesterdayDate.toISOString().split('T')[0];
+  
+  const latestEntry = entries[0];
+  if (!latestEntry) return 0;
+  
+  const latestDate = latestEntry.entry_date;
+  
+  // If latest entry is not today or yesterday, streak is broken
+  if (latestDate !== today && latestDate !== yesterday) {
+      return 0;
+  }
+  
+  let currentStreak = 1;
+  let currentDate = new Date(latestDate);
+  
+  for (let i = 1; i < entries.length; i++) {
+      currentDate.setDate(currentDate.getDate() - 1);
+      const expectedDateStr = currentDate.toISOString().split('T')[0];
+      
+      if (entries[i].entry_date === expectedDateStr) {
+          currentStreak++;
+      } else {
+          break;
+      }
+  }
+  
+  return currentStreak;
+}
 
 function App() {
   const { user, loading: authLoading, passwordRecoveryMode } = useAuth();
@@ -28,16 +64,8 @@ function App() {
       const entryData = await entryService.getEntries();
       setEntries(entryData || []);
 
-      // 2. Fetch Streak from Profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('current_streak')
-        .eq('id', user.id)
-        .single();
-
-      if (!profileError && profileData) {
-        setStreak(profileData.current_streak || 0);
-      }
+      // 2. Calculate Streak locally
+      setStreak(calculateStreak(entryData));
 
     } catch (error) {
       console.error('Error loading data:', error);
@@ -54,6 +82,7 @@ function App() {
       setStreak(0);
     }
   }, [user]);
+
 
   // Render Loading
   if (authLoading) {

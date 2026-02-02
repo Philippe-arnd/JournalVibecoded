@@ -42,7 +42,7 @@ export default function PrivacyPolicyView() {
 
             <h2 className="text-xl font-bold text-journal-900 mt-8 mb-4">3. Data Security</h2>
             <p className="mb-4">
-                All data is encrypted in transit (via HTTPS) and at rest. We use Supabase for secure data storage. We do not sell your personal data to third parties.
+                All data is encrypted in transit (via HTTPS) and at rest. We use secure cloud storage. We do not sell your personal data to third parties.
             </p>
 
             <h2 className="text-xl font-bold text-journal-900 mt-8 mb-4">4. Your Rights</h2>
