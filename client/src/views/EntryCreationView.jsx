@@ -227,7 +227,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
           return (
             <div
               key={section.id}
-              className="absolute w-[90%] md:w-full max-w-md bg-white rounded-3xl shadow-sm border border-journal-200 h-[75vh] transition-all duration-500 ease-in-out flex flex-col overflow-hidden"
+              className="absolute w-[90%] md:w-full max-w-md bg-white rounded-3xl shadow-sm border border-journal-200 h-[70vh] transition-all duration-500 ease-in-out flex flex-col overflow-hidden"
               style={{
                 zIndex: -offset,
                 transform: `translateY(${translateY}px) scale(${scale}) rotate(${rotate}deg)`,
@@ -266,7 +266,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
                 handlePrev();
               }
             }}
-            className="absolute w-[90%] md:w-full max-w-md bg-white rounded-3xl shadow-xl border border-journal-200 flex flex-col h-[75vh] z-10"
+            className="absolute w-[90%] md:w-full max-w-md bg-white rounded-3xl shadow-xl border border-journal-200 flex flex-col min-h-[50vh] max-h-[85vh] h-auto z-10"
           >
             {/* Navigation Buttons Floating */}
             <div className="absolute top-6 right-6 z-20">
@@ -289,7 +289,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
                 </div>
              )}
 
-            <div className="p-8 pt-16 flex-1 flex flex-col">
+            <div className="p-8 pt-16 flex-1 flex flex-col min-h-0">
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <span className="text-sm font-bold text-journal-300 uppercase tracking-widest">
