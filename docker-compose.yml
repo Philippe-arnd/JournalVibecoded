@@ -29,7 +29,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "${SERVER_PORT:-3000}:3000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 10s
@@ -44,10 +44,15 @@ services:
         - VITE_ENCRYPTION_KEY=${VITE_ENCRYPTION_KEY}
     restart: always
     ports:
-      - "5173:80"
+      - "${CLIENT_PORT:-5173}:80"
     depends_on:
       server:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
 
 volumes:
   postgres_data:

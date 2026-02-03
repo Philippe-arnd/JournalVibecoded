@@ -40,3 +40,5 @@ gemini.md
 # Docker
 .dockerignore
 # (Usually we don't ignore docker-compose.yml or Dockerfiles)
+
+gha-creds-*.json

@@ -15,6 +15,7 @@ RUN npm run build
 
 # Production stage
 FROM nginx:alpine
+RUN apk add --no-cache curl
 COPY --from=builder /app/dist /usr/share/nginx/html
 # Add custom nginx config if needed for SPA routing
 RUN echo "server { \
