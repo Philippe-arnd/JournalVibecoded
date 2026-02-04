@@ -107,7 +107,7 @@ This document provides the complete epic and story breakdown for journal, decomp
 - Supabase PostgreSQL for data persistence with auto-generated types
 - Claude API integration via server-side calls (Anthropic API)
 - PWA manifest and service worker for installability (no offline storage for MVP)
-- Vercel deployment with environment variable management
+- Cloud deployment with environment variable management
 - Auto-save pattern with 500ms debounce and optimistic UI
 - Component architecture: EntrySection, AIFeedbackCard, StreakBadge, TimelineEntryCard, etc.
 - Database triggers for auto-updating user stats (streak calculation)

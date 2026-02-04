@@ -25,7 +25,7 @@ Visual representations of the system architecture are available in the diagrams 
 
 1. **System Architecture** - `/diagrams/system-architecture.excalidraw`
    - React PWA → Supabase → Claude API flow
-   - Vercel hosting infrastructure
+   - Standard hosting infrastructure
 
 2. **Database ERD** - `/diagrams/database-erd.excalidraw`
    - Table relationships (user_profiles, entries, milestones)
@@ -103,7 +103,7 @@ This architecture document defines the technical implementation for journal, a P
 
 ### Hosting & Deployment
 
-**Hosting: Vercel (recommended) or Netlify**
+**Hosting: Netlify (recommended) or other static hosting providers**
 - Automatic deployments from git
 - Edge function support for AI API calls
 - Global CDN for fast static asset delivery
@@ -673,8 +673,8 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 VITE_ANTHROPIC_API_KEY=sk-ant-api03-xxx
 ```
 
-**Production (Vercel Environment Variables):**
-- Same variables set in Vercel dashboard
+**Production (Hosting Environment Variables):**
+- Same variables set in hosting dashboard
 - Encrypted and injected at build time
 
 ### Build Process
@@ -685,11 +685,11 @@ npm run build
 # Output: dist/ folder with optimized static assets
 ```
 
-**Vercel Deployment:**
+**Hosting Deployment:**
 - Connect GitHub repository
 - Automatic deployments on push to `main`
 - Preview deployments for pull requests
-- Environment variables configured in Vercel dashboard
+- Environment variables configured in hosting dashboard
 
 ### Database Migrations
 
@@ -765,7 +765,7 @@ supabase db push
 
 ### Performance Monitoring
 
-**Vercel Analytics (built-in):**
+**Hosting Analytics (built-in):**
 - Core Web Vitals (LCP, FID, CLS)
 - Server response times
 - Geographic distribution of users
@@ -824,7 +824,7 @@ This architecture document provides implementation-ready technical specification
 ✅ **Authentication** - Supabase Auth with email/password
 ✅ **Performance** - Code splitting, debounced auto-save, <3s AI responses
 ✅ **Security** - RLS policies, API key protection, input validation
-✅ **Deployment** - Vercel hosting, environment variables, CI/CD
+✅ **Deployment** - Cloud hosting, environment variables, CI/CD
 
 **Next Step:** Break down into Epics & Stories for implementation.
 

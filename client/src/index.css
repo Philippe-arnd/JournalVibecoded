@@ -2,8 +2,21 @@
 @config "../tailwind.config.js";
 
 /* Basic reset if needed, though Tailwind handles most */
+html, body {
+  background-color: #FDFBF7;
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  min-height: -webkit-fill-available;
+}
+
 body {
   @apply bg-journal-50 text-journal-900 antialiased;
+  min-height: 100dvh;
+}
+
+#root {
+  min-height: 100dvh;
 }
 
 /* Hide native browser password reveal and clear buttons */

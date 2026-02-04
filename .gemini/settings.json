@@ -3,5 +3,12 @@
     "codebaseInvestigatorSettings": {
       "enabled": false
     }
+  },
+  "agents": {
+    "overrides": {
+      "codebase_investigator": {
+        "enabled": false
+      }
+    }
   }
 }

@@ -81,7 +81,7 @@
     },
     {
       "type": "rectangle",
-      "id": "vercel-hosting",
+      "id": "cloud-hosting",
       "x": 800,
       "y": 250,
       "width": 180,
@@ -91,7 +91,7 @@
       "strokeColor": "#000000",
       "backgroundColor": "#F5F5F5",
       "label": {
-        "text": "Vercel Hosting\n\nStatic Assets\nCDN",
+        "text": "Cloud Hosting\n\nStatic Assets\nCDN",
         "fontSize": 16,
         "fontFamily": 1,
         "textAlign": "center",
