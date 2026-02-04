@@ -2,7 +2,7 @@
   "name": "Journal App",
   "short_name": "Journal",
   "description": "A personal journaling application",
-  "theme_color": "#3D8D88",
+  "theme_color": "#FDFBF7",
   "background_color": "#FDFBF7",
   "display": "standalone",
   "start_url": "/",
