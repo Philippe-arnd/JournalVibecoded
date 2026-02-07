@@ -20,8 +20,8 @@ services:
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-journal}
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
-      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:3000}
-      - CLIENT_URL=${CLIENT_URL:-http://localhost:5173}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL}
+      - CLIENT_URL=${CLIENT_URL}
       - RESEND_API_KEY=${RESEND_API_KEY}
       - EMAIL_FROM=${EMAIL_FROM}
       - TEST_USER_EMAIL=${TEST_USER_EMAIL}
@@ -40,7 +40,7 @@ services:
     build: 
       context: ./client
       args:
-        - VITE_API_URL=${VITE_API_URL:-http://localhost:3000}
+        - VITE_API_URL=${VITE_API_URL}
         - VITE_ENCRYPTION_KEY=${VITE_ENCRYPTION_KEY}
     restart: always
     depends_on:
