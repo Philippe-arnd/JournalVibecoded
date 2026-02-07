@@ -1,0 +1,14 @@
+# On autorise explicitement tout ce que le gitignore cache
+!dist/
+!build/
+!.output/
+!*.log
+!.vscode/
+!.gemini.md
+
+# On garde quand même les dossiers lourds et inutiles exclus
+# pour ne pas exploser ton quota de tokens
+node_modules/
+**/node_modules/
+.git/
+.DS_Store

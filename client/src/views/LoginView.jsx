@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Loader2, ArrowLeft, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,11 +20,12 @@ export default function LoginView({ mode = 'login' }) {
   const [resetLoading, setResetLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const { signIn, signUp, resetPassword } = useAuth();
+  const navigate = useNavigate();
 
-  // Reset success state when switching between login/signup
+  // Reset error when mode changes
   useEffect(() => {
-    setSignupSuccess(false);
     setError('');
+    setSignupSuccess(false);
   }, [mode]);
 
   // Calculate password strength for validation
@@ -48,6 +49,7 @@ export default function LoginView({ mode = 'login' }) {
     e.preventDefault();
     setError('');
     setLoading(true);
+    console.log('Attempting login for:', email);
 
     try {
       if (isSignUp) {
@@ -75,12 +77,19 @@ export default function LoginView({ mode = 'login' }) {
           setConfirmPassword('');
         }
       } else {
-        const { error: signInError } = await signIn({ email, password });
-        if (signInError) {
-          setError('Invalid email or password');
+        const result = await signIn({ email, password });
+        console.log('SignIn result:', result);
+        
+        if (result?.error) {
+          setError(result.error.message || 'Invalid email or password');
+        } else {
+          // Explicit redirect on success
+          console.log('Login successful, redirecting to /home');
+          navigate('/home');
         }
       }
-    } catch (err) {
+    } catch {
+      console.error('Login error');
       setError('An error occurred. Please try again.');
     }
     setLoading(false);
@@ -98,7 +107,7 @@ export default function LoginView({ mode = 'login' }) {
       } else {
         setResetSent(true);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to send reset email. Please try again.');
     }
     setResetLoading(false);
@@ -206,6 +215,7 @@ export default function LoginView({ mode = 'login' }) {
         <AnimatePresence mode="wait">
           {signupSuccess ? (
             <motion.div
+              key="success"
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -231,6 +241,7 @@ export default function LoginView({ mode = 'login' }) {
             </motion.div>
           ) : (
             <motion.form
+              key="auth-form"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               onSubmit={handleAuth}

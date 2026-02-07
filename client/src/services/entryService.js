@@ -63,7 +63,7 @@ export const entryService = {
           if (field === 'ai_cited_entries' && typeof decryptedValue === 'string') {
             try {
               decryptedEntry[field] = JSON.parse(decryptedValue);
-            } catch (e) {
+            } catch {
               decryptedEntry[field] = decryptedValue;
             }
           } else {
@@ -91,7 +91,7 @@ export const entryService = {
         if (field === 'ai_cited_entries' && typeof decryptedValue === 'string') {
           try {
             decryptedEntry[field] = JSON.parse(decryptedValue);
-          } catch (e) {
+          } catch {
             decryptedEntry[field] = decryptedValue;
           }
         } else {
@@ -139,7 +139,7 @@ export const entryService = {
         if (field === 'ai_cited_entries' && typeof decryptedValue === 'string') {
           try {
             decryptedData[field] = JSON.parse(decryptedValue);
-          } catch (e) {
+          } catch {
             decryptedData[field] = decryptedValue;
           }
         } else {

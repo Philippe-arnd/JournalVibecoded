@@ -8,7 +8,8 @@
     "start": "node dist/server.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "seed:user": "tsx src/scripts/create-test-user.ts"
   },
   "dependencies": {
     "better-auth": "^1.1.15",

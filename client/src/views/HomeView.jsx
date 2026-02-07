@@ -1,7 +1,6 @@
 import { Plus, ChevronDown, Trash2, Edit2, Calendar as CalendarIcon, List, Settings, LogOut, Lock, X, ChevronLeft, ChevronRight, Sparkles, Loader2, Snowflake } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Flame } from 'lucide-react';
 import DOMPurify from 'dompurify';
@@ -18,9 +17,8 @@ const getLocalDateStr = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-export default function HomeView({ onStartNew, entries, onEdit, onDelete, streak }) {
+export default function HomeView({ onStartNew, entries, onEdit, onDelete }) {
   const { signOut } = useAuth();
-  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('timeline');
   const [showSettings, setShowSettings] = useState(false);
   const [showDateSelection, setShowDateSelection] = useState(false);
@@ -28,9 +26,6 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete, streak
   const { streakCount, isAtRisk } = useMemo(() => {
     if (!entries || entries.length === 0) return { streakCount: 0, isAtRisk: false };
     
-    // Log raw entries for one final check on why 23/24 are missing
-    console.log('Raw entries dates:', entries.map(e => ({ date: e.entry_date, comp: e.completed })));
-
     // Parse all entries into a set of YYYY-MM-DD
     const entryDates = new Set(entries.map(e => e.entry_date.split('T')[0]));
 
@@ -89,8 +84,6 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete, streak
     const hasToday = entries.some(e => e.entry_date.split('T')[0] === todayStr);
 
     if (hasToday) {
-      // If today exists, we might still want to allow starting a new one? 
-      // Existing logic just calls onStartNew()
       onStartNew();
       return;
     }
@@ -209,13 +202,10 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete, streak
             onSignOut={async () => {
               try {
                 await signOut();
-              } catch (error) {
-                // Ignore errors during sign out (e.g. session already expired)
-                console.error('Sign out error:', error);
+              } catch {
+                // Ignore errors during sign out
               }
-              // Clear all local storage to ensure session is gone
               localStorage.clear();
-              // Force a full page reload to clear all state
               window.location.href = '/';
             }}
           />
@@ -461,7 +451,7 @@ function TimelineCard({ entry, onEdit, onDelete }) {
         >
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
-              {/* Date Block (Replacing generic text) */}
+              {/* Date Block */}
               <div className="flex flex-col items-center justify-center w-12 h-12 bg-journal-50 rounded-xl border border-journal-100 text-journal-900">
                 <span className="text-[10px] font-bold uppercase text-journal-400 leading-none mb-0.5">{month}</span>
                 <span className="text-lg font-serif font-bold leading-none">{day}</span>
@@ -590,7 +580,7 @@ function SettingsModal({ onClose, onSignOut }) {
           onClose();
         }, 1500);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to update password. Please try again.');
     }
     setLoading(false);

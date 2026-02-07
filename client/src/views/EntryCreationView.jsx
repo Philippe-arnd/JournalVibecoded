@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, X, Check, Loader2, Bold, List, Indent, Outdent } from 'lucide-react';
 import { entryService } from '../services/entryService';
 
@@ -33,10 +33,12 @@ const SECTIONS = [
 const RichTextEditor = ({ value, onChange, placeholder }) => {
   const editorRef = useRef(null);
 
+  // Initial value only
   useEffect(() => {
-    if (editorRef.current) {
+    if (editorRef.current && editorRef.current.innerHTML !== (value || '')) {
       editorRef.current.innerHTML = value || '';
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleInput = () => {
@@ -45,8 +47,8 @@ const RichTextEditor = ({ value, onChange, placeholder }) => {
     }
   };
 
-  const exec = (command, value = null) => {
-    document.execCommand(command, false, value);
+  const exec = (command, val = null) => {
+    document.execCommand(command, false, val);
     editorRef.current?.focus();
   };
 
@@ -161,11 +163,11 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
 
   // Variants for card stack animation
   const variants = {
-    enter: (direction) => ({
-      x: direction > 0 ? 1000 : -1000,
+    enter: (dir) => ({
+      x: dir > 0 ? 1000 : -1000,
       opacity: 0,
       scale: 0.9,
-      rotate: direction > 0 ? 5 : -5,
+      rotate: dir > 0 ? 5 : -5,
     }),
     center: {
       zIndex: 1,
@@ -174,12 +176,12 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
       scale: 1,
       rotate: 0,
     },
-    exit: (direction) => ({
+    exit: (dir) => ({
       zIndex: 0,
-      x: direction < 0 ? 1000 : -1000,
+      x: dir < 0 ? 1000 : -1000,
       opacity: 0,
       scale: 0.9,
-      rotate: direction < 0 ? 5 : -5,
+      rotate: dir < 0 ? 5 : -5,
     })
   };
 
@@ -211,13 +213,6 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
         {[2, 1].map((offset) => {
           const index = (currentSectionIndex + offset) % SECTIONS.length;
           const section = SECTIONS[index];
-          // Map section ID to DB field name
-          const fieldName = section.id === 'professional' ? 'professional_recap' 
-            : section.id === 'personal' ? 'personal_recap'
-            : section.id === 'learning' ? 'learning_reflections'
-            : 'gratitude';
-            
-          const hasContent = entryData[fieldName]?.trim().length > 0;
           
           // Alternating rotations to show corners
           const rotate = offset === 1 ? 2 : -1;
@@ -227,7 +222,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
           return (
             <div
               key={section.id}
-              className="absolute w-[90%] md:w-full max-w-md bg-white rounded-3xl shadow-sm border border-journal-200 h-[70vh] transition-all duration-500 ease-in-out flex flex-col overflow-hidden"
+              className="absolute w-[90%] md:w-full max-w-md bg-white rounded-3xl shadow-sm border border-journal-200 h-[85vh] transition-all duration-500 ease-in-out flex flex-col overflow-hidden"
               style={{
                 zIndex: -offset,
                 transform: `translateY(${translateY}px) scale(${scale}) rotate(${rotate}deg)`,
@@ -258,7 +253,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={1}
-            onDragEnd={(e, { offset, velocity }) => {
+            onDragEnd={(_e, { offset, velocity }) => {
               const swipe = swipePower(offset.x, velocity.x);
               if (swipe < -swipeConfidenceThreshold) {
                 handleNext();
@@ -266,7 +261,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
                 handlePrev();
               }
             }}
-            className="absolute w-[90%] md:w-full max-w-md bg-white rounded-3xl shadow-xl border border-journal-200 flex flex-col min-h-[50vh] max-h-[85vh] h-auto z-10"
+            className="absolute w-[90%] md:w-full max-w-md bg-white rounded-3xl shadow-xl border border-journal-200 flex flex-col h-[85vh] z-10"
           >
             {/* Navigation Buttons Floating */}
             <div className="absolute top-6 right-6 z-20">

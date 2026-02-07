@@ -15,10 +15,10 @@ COPY package*.json ./
 RUN npm install --omit=dev --legacy-peer-deps
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src/templates ./src/templates
-COPY --from=builder /app/src/db/schema.ts ./src/db/schema.ts
+COPY --from=builder /app/src ./src
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 
 EXPOSE 3000
-# Run migrations before starting the server
-CMD ["sh", "-c", "npm run db:push && npm start"]
+# Run migrations and seed test user before starting the server
+CMD ["sh", "-c", "npm run db:push && npm run seed:user && npm start"]

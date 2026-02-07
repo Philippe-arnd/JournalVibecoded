@@ -40,7 +40,6 @@ logs/
 # AI / Tools
 .claude/
 _bmad/
-gemini.md
 .gemini/
 
 # Docker
