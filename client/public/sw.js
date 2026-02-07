@@ -10,7 +10,14 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Network-first or stale-while-revalidate could be added here
-  // For now, we just need the fetch handler to be present for PWA detection
+  const url = new URL(event.request.url);
+  
+  // Skip interception for API calls to let the browser handle them directly
+  // This is crucial for authentication and SSL/CORS issues
+  if (url.pathname.startsWith('/api')) {
+    return;
+  }
+
+  // For everything else, proceed with standard fetch
   event.respondWith(fetch(event.request));
 });
