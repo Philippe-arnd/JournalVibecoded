@@ -19,62 +19,78 @@ This document serves as the primary context for the Gemini CLI agent, defining t
 - **Authentication**: Better Auth (Drizzle adapter)
 - **Email**: Resend (for verification and password resets)
 
-### Infrastructure
-- **Containerization**: Docker Compose
-- **Deployment**: Coolify (Self-hosted on VPS)
-- **Environment**: Multi-application VPS environment sharing host resources
+---
+
+## 🛠 Infrastructure & Deployment (Coolify)
+
+The application is deployed on a self-hosted VPS using Coolify, sharing resources with other applications.
+
+### 🌐 Domain Strategy
+- **Production**:
+    - Client: `https://journal.philapps.com`
+    - API: `https://api.journal.philapps.com`
+- **Preview (PR-based)**:
+    - Template: `https://{{pr_id}}.journal.philapps.com`
+    - API Template: `https://api-{{pr_id}}.journal.philapps.com`
+    - *Requires Wildcard DNS (`*.journal`) pointing to the VPS IP.*
+
+### ⚠️ Critical Deployment Rules
+1.  **Port Mapping**: **Never use fixed host port mappings** (e.g., `3000:3000`) in `docker-compose.yml`. Coolify manages routing internally. Using fixed ports will cause `port already allocated` errors on the shared VPS.
+2.  **HTTPS Enforcement**: All FQDNs in Coolify must start with `https://`. Better Auth requires HTTPS to set secure session cookies.
+3.  **Proxy Trust**: The Express server is configured with `app.set('trust proxy', true)` to correctly detect HTTPS behind Coolify's reverse proxy.
+4.  **Service Worker**: The `sw.js` is configured to **bypass all `/api` routes**. Intercepting API calls can break authentication, especially during SSL certificate updates or origin mismatches.
+
+### 🔑 Environment Variables Management
+Variables must be set in the Coolify UI (Production and Preview tabs).
+
+| Variable | Requirement | Purpose |
+| :--- | :--- | :--- |
+| `VITE_API_URL` | **Build Variable** | Essential for Vite to bake the correct API endpoint into static assets. |
+| `VITE_ENCRYPTION_KEY`| **Build Variable** | Required for client-side encryption logic. |
+| `BETTER_AUTH_URL` | Runtime Variable | Must match the API domain exactly. |
+| `CLIENT_URL` | Runtime Variable | Used for CORS and trusted origins in `auth.ts`. |
 
 ---
 
-## 🛠 Development & Local Testing
+## 🛠 Local Testing & Development
 
 ### Local Setup
-The application must be launched via Docker Compose to ensure environment parity:
+Run via Docker Compose for environment parity:
 ```bash
 docker-compose up -d --build
 ```
 
-### Critical Constraints
-1.  **Port Mapping**: Internally, services use standard ports (`3000` for API, `5432` for DB). **Do not use fixed host port mapping** that could conflict with other applications on the production VPS or Coolify's internal routing.
-2.  **Origin Consistency**: Always access the application via `http://localhost:5173`. Accessing via `127.0.0.1` will cause session cookie mismatches between the client and the `baseURL` configured in Better Auth.
-3.  **Automated Seeding**: A test user is automatically created and verified on every server startup via the `seed:user` script triggered in the `Dockerfile`.
+### Constraints
+- **Origin Consistency**: Always use `http://localhost:5173`. Avoid `127.0.0.1` to prevent cookie/origin mismatch errors with Better Auth.
+- **Automated Seeding**: The `seed:user` script runs automatically on container start. It **deletes and recreates** the test user (`test@philapps.com`) to ensure credentials always match the `.env` variables.
 
 ---
 
 ## 💎 Quality & Performance Standards
 
 ### Code Quality
-- **Linting**: All frontend code must pass `npm run lint` (ESLint).
-- **Type Checking**: Server-side logic must adhere to TypeScript standards defined in `tsconfig.json`.
-- **Modularity**: Logic should be separated into Services (data), Hooks (state), and Views (UI).
-
-### Performance
-- **Build Optimization**: Vite build should target modern browsers with appropriate chunk splitting for large libraries.
-- **Docker Efficiency**: Use multi-stage builds (`alpine` images) to minimize production footprint.
-- **Health Checks**: Every service in `docker-compose.yml` must have a functional health check (`curl` or `pg_isready`).
-
-### Security
-- **Data Privacy**: Sensitive journal fields (professional recap, personal recap, learning, gratitude) must be encrypted before being stored in the database.
-- **Auth**: Enforce email verification for all accounts.
+- **Linting**: Must pass `npm run lint`. ESLint is configured to allow `motion` prefixes and handle Service Worker globals.
+- **Type Checking**: Server-side logic must adhere to TypeScript standards.
+- **Seeding Robustness**: The `seed:user` script is idempotent and error-tolerant; it will not block server startup if external services (like Resend) are unavailable.
 
 ---
 
 ## 📜 Workflow & Commit Convention
 
 ### Commit Messages
-To maintain a clear project history, **every commit message must include a changelog** detailing the specific changes made.
+Every commit must include a bullet-point changelog.
 
 **Format:**
 ```
-Short descriptive summary of the change
+Short descriptive summary
 
-- Bullet point 1: What was changed and why.
+- Bullet point 1: What/Why.
 - Bullet point 2: Implementation detail.
-- Bullet point 3: Verification step performed.
+- Bullet point 3: Verification step.
 ```
 
 ### Agent Mandate
-When modifying the codebase, the agent must proactively:
-1.  Check for linting errors.
-2.  Verify the impact on the Docker deployment.
-3.  Ensure environment variables are updated in `.env.example`.
+1.  Proactively check for linting errors.
+2.  Verify Docker deployment impact.
+3.  Ensure `.env.example` remains updated.
+4.  Maintain `app.set('trust proxy', true)` and `sw.js` API bypass.
