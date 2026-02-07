@@ -6,6 +6,8 @@ import entriesRouter from "./routes/entries";
 
 const app = express();
 
+app.set('trust proxy', true);
+
 const allowedOrigins = [
     process.env.CLIENT_URL,
     "http://localhost:5173",
