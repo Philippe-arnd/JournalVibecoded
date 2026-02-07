@@ -49,7 +49,7 @@ export default function UpdatePasswordView() {
         // Success - navigate to home
         navigate('/home', { replace: true });
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred. Please try again.');
     }
     setLoading(false);

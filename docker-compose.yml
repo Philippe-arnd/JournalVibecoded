@@ -8,6 +8,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-journal}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -24,6 +26,8 @@ services:
       - CLIENT_URL=${CLIENT_URL:-http://localhost:5173}
       - RESEND_API_KEY=${RESEND_API_KEY}
       - EMAIL_FROM=${EMAIL_FROM}
+      - TEST_USER_EMAIL=${TEST_USER_EMAIL}
+      - TEST_USER_PWD=${TEST_USER_PWD}
       - PORT=3000
     depends_on:
       db:

@@ -4,16 +4,16 @@ import { authClient } from '../lib/auth';
 const AuthContext = createContext({});
 
 export const AuthProvider = ({ children }) => {
-  const { data: session, isPending, error } = authClient.useSession();
-  const [loading, setLoading] = useState(true);
+  const { data: session, isPending } = authClient.useSession();
+  const [hasInitialized, setHasInitialized] = useState(false);
   const user = session?.user || null;
   const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
 
   useEffect(() => {
-    if (!isPending) {
-        setLoading(false);
+    if (!isPending && !hasInitialized) {
+        setHasInitialized(true);
     }
-  }, [isPending]);
+  }, [isPending, hasInitialized]);
 
   useEffect(() => {
      // Check for reset token
@@ -68,12 +68,13 @@ export const AuthProvider = ({ children }) => {
        });
     },
     user,
+    loading: !hasInitialized,
     passwordRecoveryMode,
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {hasInitialized ? children : null}
     </AuthContext.Provider>
   );
 };

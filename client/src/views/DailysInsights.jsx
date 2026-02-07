@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, Check } from 'lucide-react';
 import { INSIGHTS_LIBRARY } from '../data/insights';
 import { getInsightIcon, getInsightTheme } from '../utils/insightUtils';
 
 export default function DailysInsights() {
-  const [insightsStack, setInsightsStack] = useState([]);
+  const [insightsStack] = useState(() => {
+    // Shuffle and pick 3 insights for the session
+    return [...INSIGHTS_LIBRARY].sort(() => 0.5 - Math.random()).slice(0, 3);
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
 
-  useEffect(() => {
-    // Shuffle and pick 3 insights for the session
-    const shuffled = [...INSIGHTS_LIBRARY].sort(() => 0.5 - Math.random());
-    setInsightsStack(shuffled.slice(0, 3));
-  }, []);
+  const handleNext = () => {
+    setDirection(1);
+    setCurrentIndex(prev => prev + 1);
+  };
 
   useEffect(() => {
     let timer;
@@ -25,11 +27,6 @@ export default function DailysInsights() {
     }
     return () => clearTimeout(timer);
   }, [currentIndex, insightsStack.length]);
-
-  const handleNext = () => {
-    setDirection(1);
-    setCurrentIndex(prev => prev + 1);
-  };
 
   const variants = {
     enter: (direction) => ({

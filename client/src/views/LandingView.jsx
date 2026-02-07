@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, Brain, Feather, CheckCircle2, Lock, Layout, Star, Github, Calendar, ChevronDown } from 'lucide-react';
+import { ArrowRight, Sparkles, Brain, Feather, Lock, Layout, Star, Github, Calendar, ChevronDown } from 'lucide-react';
 import Logo from '../components/Logo';
 
 // Animation Variants

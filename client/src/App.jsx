@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { entryService } from './services/entryService';
@@ -55,7 +55,7 @@ function App() {
   const [dataLoading, setDataLoading] = useState(false);
 
   // Centralized Data Loading
-  const loadData = async (background = false) => {
+  const loadData = useCallback(async (background = false) => {
     if (!user) return;
     if (!background && entries.length === 0) setDataLoading(true);
 
@@ -72,7 +72,7 @@ function App() {
     } finally {
       if (!background) setDataLoading(false);
     }
-  };
+  }, [user, entries.length]);
 
   useEffect(() => {
     if (user) {
@@ -81,7 +81,7 @@ function App() {
       setEntries([]);
       setStreak(0);
     }
-  }, [user]);
+  }, [user, loadData]);
 
 
   // Render Loading
@@ -120,7 +120,7 @@ function App() {
             <AuthenticatedHome 
               entries={entries} 
               streak={streak} 
-              refreshData={() => loadData(true)} 
+              refreshData={loadData} 
               loading={dataLoading} 
             />
           ) : (
@@ -132,7 +132,7 @@ function App() {
         path="/create" 
         element={
           user ? (
-            <AuthenticatedCreate onDataUpdate={() => loadData(true)} />
+            <AuthenticatedCreate onDataUpdate={loadData} />
           ) : (
             <Navigate to="/login" replace />
           )
@@ -144,13 +144,12 @@ function App() {
 
 // Component for authenticated home route
 function AuthenticatedHome({ entries, streak, refreshData, loading }) {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   // Refresh data in background on mount
   useEffect(() => {
-    refreshData();
-  }, []);
+    refreshData(true);
+  }, [refreshData]);
 
   const handleStartNew = (options = {}) => {
     const { entry_date } = options;
@@ -174,7 +173,7 @@ function AuthenticatedHome({ entries, streak, refreshData, loading }) {
     if (window.confirm('Are you sure you want to delete this entry?')) {
       try {
         await entryService.deleteEntry(id);
-        await refreshData();
+        await refreshData(true);
       } catch (error) {
         console.error('Failed to delete:', error);
         alert('Failed to delete entry: ' + error.message);
@@ -211,7 +210,7 @@ function AuthenticatedCreate({ onDataUpdate }) {
   const selectedEntry = location.state?.entry;
 
   const handleEntryFinish = () => {
-    onDataUpdate(); // Refresh data before navigating back
+    onDataUpdate(true); // Refresh data before navigating back
     navigate('/home');
   };
 
