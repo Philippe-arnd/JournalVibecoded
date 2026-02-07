@@ -12,24 +12,24 @@ const seed = async () => {
     const password = process.env.TEST_USER_PWD || "password123";
     const name = "Test User";
 
-    console.log(`Forcing fresh seed for user: ${email} (Password length: ${password.length})`);
+    console.log(`[SEED] Starting seeding for: ${email}`);
 
     try {
-        // Find user
-        const existingUser = await db.query.user.findFirst({
-            where: eq(user.email, email)
-        });
+        // Find existing user using standard select
+        const existingUsers = await db.select().from(user).where(eq(user.email, email)).limit(1);
+        const existingUser = existingUsers[0];
 
         if (existingUser) {
-            console.log("User exists, deleting to ensure fresh credentials...");
-            // Delete related accounts and sessions first
+            console.log("[SEED] User exists, deleting to ensure fresh credentials...");
+            // Delete related records
             await db.delete(account).where(eq(account.userId, existingUser.id));
             await db.delete(session).where(eq(session.userId, existingUser.id));
             await db.delete(user).where(eq(user.id, existingUser.id));
         }
 
-        // Create fresh user
-        const result = await auth.api.signUpEmail({
+        console.log("[SEED] Creating fresh test user...");
+        // Create fresh user via Better Auth API
+        await auth.api.signUpEmail({
             body: {
                 email,
                 password,
@@ -37,21 +37,23 @@ const seed = async () => {
             }
         });
         
-        console.log("User created successfully:", email);
+        console.log("[SEED] User created, forcing email verification...");
 
-        // Always ensure the email is verified in the database
+        // Ensure email is verified
         await db.update(user)
             .set({ emailVerified: true })
             .where(eq(user.email, email));
 
-        console.log("Email verification updated successfully.");
+        console.log("[SEED] Seeding completed successfully.");
     } catch (error: any) {
-        console.error("Error during seeding:", error);
-        process.exit(1);
+        console.error("[SEED] Error during seeding process:", error?.message || error);
+        // We don't process.exit(1) here to allow the server to start anyway
     }
-
-    console.log("Seeding process completed.");
-    process.exit(0);
 };
 
-seed();
+seed().then(() => {
+    process.exit(0);
+}).catch((err) => {
+    console.error("[SEED] Unhandled error:", err);
+    process.exit(0); // Exit gracefully to not block container startup
+});
