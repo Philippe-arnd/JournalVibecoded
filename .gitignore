@@ -44,6 +44,7 @@ _bmad/
 
 # Docker
 .dockerignore
+docker-compose.override.yml
 
 # Misc
 gha-creds-*.json
