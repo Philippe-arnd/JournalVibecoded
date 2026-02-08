@@ -1,4 +1,4 @@
-# <img src="journal-app/public/favicon.svg" width="40" height="40" alt="Journal Logo" style="vertical-align: bottom;" /> Journal App (Vibe Coding Project)
+# <img src="client/public/favicon.svg" width="40" height="40" alt="Journal Logo" style="vertical-align: bottom;" /> Journal App (Vibe Coding Project)
 
 A personal journaling application built using the B-MAD method, designed to make daily reflection an effortless habit through a guided 4-section flow and AI-powered coaching.
 
@@ -17,7 +17,7 @@ This project follows the **B-MAD** (Brainstorming, Model, Architecting, Developi
     -   [Epics & Stories](_bmad-output/planning-artifacts/epics.md) - *Breakdown of implementation tasks.*
 -   **D**eveloping:
     -   [Sprint Status](_bmad-output/implementation-artifacts/sprint-status.yaml) - *Current tracking of implementation progress.*
-    -   **Current Phase**: Prototype Phase (Interactive UI/UX Validation). See `journal-app/` for source code.
+    -   **Current Phase**: Implementation (Full-stack Integration). Source code in `client/` and `server/`.
 
 ## 📂 Project Artifacts
 
@@ -29,25 +29,36 @@ The `_bmad-output/` folder contains comprehensive documentation for the project:
 
 ## 🚀 Tech Stack
 
--   **Frontend**: React 18, Vite, Tailwind CSS
--   **Backend**: Supabase (Auth & Database)
+-   **Frontend**: React 19, Vite, Tailwind CSS 4.0, Framer Motion
+-   **Backend**: Node.js (Express), Better Auth, Drizzle ORM
+-   **Database**: PostgreSQL 17
 -   **AI**: Anthropic Claude API
--   **Tools**: VS Code, GitHub
+-   **Tools**: Docker, Vitest, VS Code
 
 ## 🛠 Setup
 
 To run the application locally:
 
 1.  Clone the repo.
-2.  Navigate to the app directory:
-    ```bash
-    cd journal-app
-    ```
-3.  Install dependencies:
+2.  Install root dependencies:
     ```bash
     npm install
     ```
-4.  Start the development server:
-    ```bash
-    npm run dev
+3.  Create a `docker-compose.override.yml` for local port mapping:
+    ```yaml
+    services:
+      server:
+        ports: ["3000:3000"]
+      client:
+        ports: ["5173:80"]
     ```
+4.  Launch the environment:
+    ```bash
+    docker-compose up -d --build
+    ```
+5.  Run tests:
+    ```bash
+    npm run test:all
+    ```
+
+Access the app at [http://localhost:5173](http://localhost:5173).
