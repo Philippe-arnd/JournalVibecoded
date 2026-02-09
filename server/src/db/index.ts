@@ -17,8 +17,8 @@ export const db = drizzle(pool, { schema });
  */
 export async function withRLS<T>(userId: string, callback: (tx: any) => Promise<T>): Promise<T> {
   return await db.transaction(async (tx) => {
-    // Set the session variable that our RLS policies use
-    await tx.execute(sql`SET LOCAL app.current_user_id = ${userId}`);
+    // Use set_config to safely set the session variable with a parameter
+    await tx.execute(sql`SELECT set_config('app.current_user_id', ${userId}, true)`);
     return await callback(tx);
   });
 }

@@ -12,6 +12,8 @@ router.use(requireAuth);
 router.get("/", async (req: any, res) => {
     try {
         const userId = req.session.user.id;
+        console.log(`[DEBUG] Fetching entries for userId: "${userId}"`);
+        
         const userEntries = await withRLS(userId, (tx) => 
             tx.query.entries.findMany({
                 where: eq(entries.userId, userId),

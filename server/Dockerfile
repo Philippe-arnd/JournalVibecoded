@@ -20,5 +20,5 @@ COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 
 EXPOSE 3000
-# Run migrations, apply RLS and seed test user before starting the server
-CMD ["sh", "-c", "npm run db:push && npm run db:rls && npm run seed:user && npm start"]
+# Run migrations and apply RLS before starting the server
+CMD ["sh", "-c", "npm run db:push && npm run db:rls && npm start"]
