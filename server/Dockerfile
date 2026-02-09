@@ -21,4 +21,4 @@ COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 
 EXPOSE 3000
 # Run migrations and seed test user before starting the server
-CMD ["sh", "-c", "npm run db:push && npm run seed:user && npm start"]
+CMD ["sh", "-c", "npm run db:migrate && npm run seed:user && npm start"]
