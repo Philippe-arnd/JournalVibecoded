@@ -4,11 +4,19 @@ import * as schema from "./schema";
 import "dotenv/config";
 import { sql } from "drizzle-orm";
 
+// Standard application connection (restricted user for RLS)
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
 export const db = drizzle(pool, { schema });
+
+// Admin connection (superuser for migrations and setup)
+const adminPool = new pg.Pool({
+  connectionString: process.env.DATABASE_ADMIN_URL || process.env.DATABASE_URL,
+});
+
+export const adminDb = drizzle(adminPool, { schema });
 
 /**
  * Executes a callback within a database transaction with RLS context set.

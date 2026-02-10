@@ -1,10 +1,10 @@
-import { db } from "../db/index";
+import { adminDb } from "../db/index";
 import { sql } from "drizzle-orm";
 
 async function applyRLS() {
-    console.log("[RLS] Applying Row Level Security policies...");
+    console.log("[RLS] Applying Row Level Security policies using Admin connection...");
     try {
-        await db.execute(sql`
+        await adminDb.execute(sql`
             -- Enable RLS
             ALTER TABLE "entries" ENABLE ROW LEVEL SECURITY;
             ALTER TABLE "entries" FORCE ROW LEVEL SECURITY;

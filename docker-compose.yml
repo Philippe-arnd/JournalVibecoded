@@ -19,7 +19,8 @@ services:
     build: ./server
     restart: always
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-journal}
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_ADMIN_URL=${DATABASE_ADMIN_URL}
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - BETTER_AUTH_URL=${BETTER_AUTH_URL}
       - CLIENT_URL=${CLIENT_URL}

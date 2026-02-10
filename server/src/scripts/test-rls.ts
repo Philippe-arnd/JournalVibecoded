@@ -73,9 +73,16 @@ async function testRLS() {
     } finally {
         console.log("5. Cleaning up test data...");
         try {
-            // Delete entries first (FK constraint)
-            await db.delete(entries).where(sql`user_id IN (${userA_id}, ${userB_id})`);
-            // Delete users
+            // We must use withRLS to delete the entries, otherwise RLS blocks the deletion
+            // because no app.current_user_id is set in the cleanup context.
+            await withRLS(userA_id, async (tx) => {
+                await tx.delete(entries).where(eq(entries.userId, userA_id));
+            });
+            await withRLS(userB_id, async (tx) => {
+                await tx.delete(entries).where(eq(entries.userId, userB_id));
+            });
+            
+            // Delete users (no RLS on 'user' table, so standard db.delete works)
             await db.delete(user).where(sql`id IN (${userA_id}, ${userB_id})`);
             console.log("✅ Cleanup successful.");
         } catch (cleanupError) {
