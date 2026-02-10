@@ -1,4 +1,4 @@
-import { db } from "../db/index";
+import { adminDb } from "../db/index";
 import { user, account, session } from "../db/schema";
 import { auth } from "../auth";
 import { eq } from "drizzle-orm";
@@ -12,19 +12,19 @@ const seed = async () => {
     const password = process.env.TEST_USER_PWD || "password123";
     const name = "Test User";
 
-    console.log(`[SEED] Starting seeding for: ${email}`);
+    console.log(`[SEED] Starting seeding for: ${email} using Admin connection`);
 
     try {
         // Find existing user using standard select
-        const existingUsers = await db.select().from(user).where(eq(user.email, email)).limit(1);
+        const existingUsers = await adminDb.select().from(user).where(eq(user.email, email)).limit(1);
         const existingUser = existingUsers[0];
 
         if (existingUser) {
             console.log("[SEED] User exists, deleting to ensure fresh credentials...");
             // Delete related records
-            await db.delete(account).where(eq(account.userId, existingUser.id));
-            await db.delete(session).where(eq(session.userId, existingUser.id));
-            await db.delete(user).where(eq(user.id, existingUser.id));
+            await adminDb.delete(account).where(eq(account.userId, existingUser.id));
+            await adminDb.delete(session).where(eq(session.userId, existingUser.id));
+            await adminDb.delete(user).where(eq(user.id, existingUser.id));
         }
 
         console.log("[SEED] Creating fresh test user...");
@@ -40,7 +40,7 @@ const seed = async () => {
         console.log("[SEED] User created, forcing email verification...");
 
         // Ensure email is verified
-        await db.update(user)
+        await adminDb.update(user)
             .set({ emailVerified: true })
             .where(eq(user.email, email));
 

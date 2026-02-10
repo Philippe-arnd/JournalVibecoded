@@ -37,28 +37,70 @@ The `_bmad-output/` folder contains comprehensive documentation for the project:
 
 ## 🛠 Setup
 
+
+
 To run the application locally:
 
+
+
 1.  Clone the repo.
+
 2.  Install root dependencies:
+
     ```bash
+
     npm install
+
     ```
-3.  Create a `docker-compose.override.yml` for local port mapping:
+
+3.  Configure your `.env` file (see `.env.example`). **Important**: Use two database variables:
+
+    -   `DATABASE_URL`: For the restricted application user (subject to RLS).
+
+    -   `DATABASE_ADMIN_URL`: For the superuser (migrations and admin tasks).
+
+4.  Create a `docker-compose.override.yml` for local port mapping:
+
     ```yaml
+
     services:
+
       server:
+
         ports: ["3000:3000"]
+
       client:
+
         ports: ["5173:80"]
+
     ```
-4.  Launch the environment:
+
+5.  Launch the environment:
+
     ```bash
+
     docker-compose up -d --build
+
     ```
-5.  Run tests:
+
+6.  Apply RLS policies and migrations:
+
     ```bash
-    npm run test:all
+
+    npm run --prefix server db:migrate
+
+    npm run --prefix server db:rls
+
     ```
+
+7.  Run tests:
+
+    ```bash
+
+    npm run test:all
+
+    ```
+
+
 
 Access the app at [http://localhost:5173](http://localhost:5173).

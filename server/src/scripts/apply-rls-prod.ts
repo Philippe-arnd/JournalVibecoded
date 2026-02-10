@@ -32,8 +32,8 @@ async function applyRLS() {
         console.log("[RLS] Policies applied successfully.");
     } catch (error) {
         console.error("[RLS] Error applying policies:", error);
-        // On ne fait pas process.exit(1) pour ne pas bloquer le démarrage du serveur
-        // si c'est juste un problème de permission mineur, mais on log l'erreur.
+        // We don't use process.exit(1) to avoid blocking server startup
+        // if it's just a minor permission issue, but we log the error.
     }
 }
 

@@ -15,7 +15,10 @@ This document serves as the primary context for the Gemini CLI agent, defining t
 - **Runtime**: Node.js (Express)
 - **Language**: TypeScript (TSX for execution)
 - **ORM**: Drizzle ORM
-- **Database**: PostgreSQL 17 (Alpine)
+- **Database**: PostgreSQL 17 (Alpine) with Row Level Security (RLS)
+- **Database Access**:
+    - `DATABASE_URL`: Restricted user for application traffic (respects RLS).
+    - `DATABASE_ADMIN_URL`: Superuser for migrations, RLS setup, and admin scripts.
 - **Authentication**: Better Auth (Drizzle adapter)
 - **Email**: Resend (for verification and password resets)
 

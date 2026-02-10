@@ -1,4 +1,4 @@
-import { db, withRLS } from "../db/index";
+import { db, adminDb, withRLS } from "../db/index";
 import { entries, user } from "../db/schema";
 import { eq, sql } from "drizzle-orm";
 import dotenv from "dotenv";
@@ -14,9 +14,9 @@ async function testRLS() {
     const today = new Date().toISOString().split('T')[0];
 
     try {
-        console.log("1. Creating temporary test users...");
+        console.log("1. Creating temporary test users using Admin connection...");
         // Create User A
-        await db.insert(user).values({
+        await adminDb.insert(user).values({
             id: userA_id,
             name: "Test User A",
             email: `a_${timestamp}@test.com`,
@@ -25,7 +25,7 @@ async function testRLS() {
             updatedAt: new Date()
         });
         // Create User B
-        await db.insert(user).values({
+        await adminDb.insert(user).values({
             id: userB_id,
             name: "Test User B",
             email: `b_${timestamp}@test.com`,
@@ -34,7 +34,7 @@ async function testRLS() {
             updatedAt: new Date()
         });
 
-        console.log(`2. Creating entry for ${userA_id}...`);
+        console.log(`2. Creating entry for ${userA_id} using restricted app connection...`);
         await withRLS(userA_id, async (tx) => {
             await tx.insert(entries).values({
                 userId: userA_id,
@@ -71,19 +71,11 @@ async function testRLS() {
     } catch (error) {
         console.error("Test failed with error:", error);
     } finally {
-        console.log("5. Cleaning up test data...");
+        console.log("5. Cleaning up test data using Admin connection...");
         try {
-            // We must use withRLS to delete the entries, otherwise RLS blocks the deletion
-            // because no app.current_user_id is set in the cleanup context.
-            await withRLS(userA_id, async (tx) => {
-                await tx.delete(entries).where(eq(entries.userId, userA_id));
-            });
-            await withRLS(userB_id, async (tx) => {
-                await tx.delete(entries).where(eq(entries.userId, userB_id));
-            });
-            
-            // Delete users (no RLS on 'user' table, so standard db.delete works)
-            await db.delete(user).where(sql`id IN (${userA_id}, ${userB_id})`);
+            // Admin connection bypasses RLS, making cleanup simple
+            await adminDb.delete(entries).where(sql`user_id IN (${userA_id}, ${userB_id})`);
+            await adminDb.delete(user).where(sql`id IN (${userA_id}, ${userB_id})`);
             console.log("✅ Cleanup successful.");
         } catch (cleanupError) {
             console.error("Cleanup failed:", cleanupError);
