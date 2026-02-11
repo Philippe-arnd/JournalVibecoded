@@ -26,13 +26,16 @@
   "commitMessagePrefix": "chore(deps):",
   "commitMessageAction": "update",
   "commitMessageExtra": "to {{newValue}}",
-  "automerge": true,
+  "automerge": false,
   "automergeType": "pr",
   "automergeStrategy": "squash",
   "ignoreTests": false,
   "packageRules": [
     {
-      "description": "Auto-merge patch updates for non-major dependencies",
+      "description": "Auto-merge patch updates ONLY for devDependencies",
+      "matchDepTypes": [
+        "devDependencies"
+      ],
       "matchUpdateTypes": [
         "patch"
       ],
@@ -62,13 +65,9 @@
       ]
     },
     {
-      "description": "Require manual review for production runtime dependencies",
+      "description": "NEVER auto-merge ANY production runtime dependencies",
       "matchDepTypes": [
         "dependencies"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "major"
       ],
       "automerge": false,
       "labels": [
