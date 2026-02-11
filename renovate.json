@@ -17,7 +17,7 @@
   "prCreation": "immediate",
   "prHourlyLimit": 0,
   "baseBranches": [
-    "dev"
+    "main"
   ],
   "separateMajorMinor": true,
   "separateMinorPatch": false,
