@@ -1,16 +1,21 @@
 name: 🤖 Auto-Merge PR
 
 on:
-  pull_request_review:
-    types: [submitted]
-  check_suite:
-    types: [completed]
-  pull_request:
-    types: [ready_for_review]
+  workflow_run:
+    workflows:
+      - "🔍 PR Validation"
+      - "🐳 Docker Build Validation"
+      - "🔒 Dependency Review"
+      - "📊 Code Coverage"
+    types:
+      - completed
+    branches:
+      - main
 
 permissions:
   contents: write
   pull-requests: write
+  checks: read
 
 jobs:
   auto-merge:
@@ -18,65 +23,112 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
-    # Only run on PRs targeting main branch
-    if: |
-      github.event.pull_request.base.ref == 'main' &&
-      github.event.pull_request.draft == false
+    # Only run if the triggering workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔍 Check PR Status
-        id: check-status
+      - name: 🔍 Find Associated PR
+        id: find-pr
         uses: actions/github-script@v7
         with:
           script: |
+            // Get the PR associated with this workflow run
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:${github.event.workflow_run.head_branch}`,
+            });
+
+            if (prs.length === 0) {
+              console.log('No open PR found for this branch');
+              return null;
+            }
+
+            const pr = prs[0];
+            console.log(`Found PR #${pr.number}: ${pr.title}`);
+
+            // Only process PRs targeting main
+            if (pr.base.ref !== 'main') {
+              console.log(`PR targets ${pr.base.ref}, not main. Skipping.`);
+              return null;
+            }
+
+            core.setOutput('pr_number', pr.number);
+            core.setOutput('pr_title', pr.title);
+            return pr.number;
+
+      - name: 🔍 Check All Required Checks
+        id: check-status
+        if: steps.find-pr.outputs.pr_number
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ steps.find-pr.outputs.pr_number }};
+
             const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.issue.number || context.payload.pull_request.number,
+              pull_number: prNumber,
             });
 
-            // Get all status checks
+            console.log(`Checking PR #${prNumber}: ${pr.title}`);
+            console.log(`Draft: ${pr.draft}`);
+            console.log(`Mergeable: ${pr.mergeable}`);
+
+            // Skip draft PRs
+            if (pr.draft) {
+              console.log('PR is draft, skipping auto-merge');
+              core.setOutput('ready_to_merge', 'false');
+              return;
+            }
+
+            // Get all status checks for the PR
             const { data: checks } = await github.rest.checks.listForRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: pr.head.sha,
             });
 
-            // Get combined status (for older status API)
-            const { data: status } = await github.rest.repos.getCombinedStatusForRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: pr.head.sha,
-            });
+            console.log(`Found ${checks.check_runs.length} check runs`);
 
-            console.log(`PR State: ${pr.state}`);
-            console.log(`PR Mergeable: ${pr.mergeable}`);
-            console.log(`PR Merged: ${pr.merged}`);
-            console.log(`Check Runs: ${checks.check_runs.length}`);
-            console.log(`Combined Status: ${status.state}`);
+            // Required workflows that must pass
+            const requiredWorkflows = [
+              '🔍 PR Validation',
+              '🐳 Docker Build Validation',
+              '🔒 Dependency Review',
+              '📊 Code Coverage'
+            ];
 
-            // Check if all checks have passed
-            const allChecksPassed = checks.check_runs.every(check =>
-              check.status === 'completed' && check.conclusion === 'success'
+            // Check if all required workflows have passed
+            const workflowStatus = {};
+            for (const check of checks.check_runs) {
+              if (requiredWorkflows.includes(check.name)) {
+                workflowStatus[check.name] = {
+                  status: check.status,
+                  conclusion: check.conclusion
+                };
+                console.log(`${check.name}: ${check.status} - ${check.conclusion}`);
+              }
+            }
+
+            // Verify all required workflows are present and successful
+            const allPresent = requiredWorkflows.every(name => name in workflowStatus);
+            const allSuccessful = requiredWorkflows.every(name =>
+              workflowStatus[name]?.status === 'completed' &&
+              workflowStatus[name]?.conclusion === 'success'
             );
 
-            const combinedStatusSuccess = status.state === 'success' || status.statuses.length === 0;
+            console.log(`All workflows present: ${allPresent}`);
+            console.log(`All workflows successful: ${allSuccessful}`);
+            console.log(`PR mergeable: ${pr.mergeable}`);
 
-            console.log(`All Checks Passed: ${allChecksPassed}`);
-            console.log(`Combined Status Success: ${combinedStatusSuccess}`);
-
-            // Set outputs
-            core.setOutput('ready_to_merge', allChecksPassed && combinedStatusSuccess && pr.mergeable && !pr.merged);
-            core.setOutput('pr_number', pr.number);
-            core.setOutput('pr_title', pr.title);
-
-            return {
-              ready: allChecksPassed && combinedStatusSuccess && pr.mergeable && !pr.merged,
-              pr_number: pr.number,
-            };
+            const readyToMerge = allPresent && allSuccessful && pr.mergeable && !pr.draft;
+            core.setOutput('ready_to_merge', readyToMerge.toString());
+            core.setOutput('pr_number', prNumber);
 
       - name: 🚀 Auto-Merge PR
         if: steps.check-status.outputs.ready_to_merge == 'true'
@@ -86,17 +138,18 @@ jobs:
             const prNumber = ${{ steps.check-status.outputs.pr_number }};
 
             try {
-              // Enable auto-merge with squash strategy
-              await github.rest.pulls.merge({
+              console.log(`Attempting to merge PR #${prNumber}...`);
+
+              // Merge the PR with squash strategy
+              const result = await github.rest.pulls.merge({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: prNumber,
                 merge_method: 'squash',
-                commit_title: `${{ steps.check-status.outputs.pr_title }} (#${prNumber})`,
-                commit_message: 'Auto-merged after all validation checks passed.',
               });
 
               console.log(`✅ PR #${prNumber} has been auto-merged!`);
+              console.log(`Merge SHA: ${result.data.sha}`);
 
               // Comment on the PR
               await github.rest.issues.createComment({
@@ -106,23 +159,15 @@ jobs:
                 body: `🤖 **Auto-merged!**\n\nAll validation checks passed successfully. This PR has been automatically merged to \`main\`.\n\n✅ Deployment to production will begin shortly via Coolify.`
               });
             } catch (error) {
-              console.log(`⚠️ Could not auto-merge: ${error.message}`);
+              console.error(`⚠️ Failed to auto-merge: ${error.message}`);
 
-              // If auto-merge failed, comment on PR
+              // Comment on the PR about the failure
               await github.rest.issues.createComment({
                 issue_number: prNumber,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 body: `⚠️ **Auto-merge attempted but failed**\n\nReason: ${error.message}\n\nPlease merge manually or check for conflicts.`
               });
-            }
 
-      - name: 📊 Status Report
-        if: steps.check-status.outputs.ready_to_merge != 'true'
-        run: |
-          echo "::notice::PR is not ready for auto-merge yet"
-          echo "Possible reasons:"
-          echo "- Some checks are still running"
-          echo "- Some checks have failed"
-          echo "- PR has merge conflicts"
-          echo "- PR is already merged"
+              throw error;
+            }
