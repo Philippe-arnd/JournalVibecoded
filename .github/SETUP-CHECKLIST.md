@@ -20,7 +20,17 @@ Go to: **Settings → Actions → General**
 - [ ] Enable: **Allow GitHub Actions to create and approve pull requests**
 - [ ] Save changes
 
-### 2. Branch Protection Rules
+### 2. Enable Auto-Merge
+
+Go to: **Settings → General → Pull Requests**
+
+- [ ] ✅ Check: **Allow auto-merge**
+  - This allows PRs to be merged automatically when all checks pass
+- [ ] ✅ Check: **Automatically delete head branches**
+  - Cleans up merged branches automatically
+- [ ] Click **Save**
+
+### 3. Branch Protection Rules
 
 Go to: **Settings → Branches → Add rule**
 
