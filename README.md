@@ -1,5 +1,9 @@
 # <img src="client/public/favicon.svg" width="40" height="40" alt="Journal Logo" style="vertical-align: bottom;" /> Journal App (Vibe Coding Project)
 
+[![PR Validation](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/pr-validation.yml/badge.svg)](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/pr-validation.yml)
+[![Docker Validation](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/docker-validation.yml/badge.svg)](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/docker-validation.yml)
+[![Dependency Review](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/dependency-review.yml/badge.svg)](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/dependency-review.yml)
+
 A personal journaling application built using the B-MAD method, designed to make daily reflection an effortless habit through a guided 4-section flow and AI-powered coaching.
 
 ## 🏗 Method: B-MAD

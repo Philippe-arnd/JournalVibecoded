@@ -62,7 +62,15 @@ function validateServiceWorker() {
 
 console.log('🚀 Starting Deployment & Infrastructure Validation...');
 checkFileExists('docker-compose.yml');
-checkFileExists('docker-compose.override.yml');
+
+// Skip override check in CI environment (it's git-ignored as expected)
+const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+if (!isCI) {
+    checkFileExists('docker-compose.override.yml');
+} else {
+    console.log('ℹ️ Skipping docker-compose.override.yml check in CI (git-ignored by design)');
+}
+
 validateDockerCompose();
 validateGitIgnore();
 validateEnvExample();
