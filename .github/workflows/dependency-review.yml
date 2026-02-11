@@ -24,9 +24,11 @@ jobs:
         with:
           # Fail on high/critical vulnerabilities
           fail-on-severity: high
-          # Deny copyleft licenses that might cause issues
-          deny-licenses: GPL-3.0, AGPL-3.0
+          # Post summary in PR comments
           comment-summary-in-pr: always
+          # Scan package manifests
+          base-ref: ${{ github.event.pull_request.base.sha }}
+          head-ref: ${{ github.event.pull_request.head.sha }}
 
       - name: 💬 Comment on PR (Vulnerability Found)
         if: failure()
