@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock pg module before anything else
 vi.mock('pg', () => {
-  const Pool = vi.fn(() => ({
-    connect: vi.fn(),
-    on: vi.fn(),
-    end: vi.fn(),
-    query: vi.fn(),
-  }));
-  return { default: { Pool }, Pool };
+  class MockPool {
+    connect = vi.fn();
+    on = vi.fn();
+    end = vi.fn();
+    query = vi.fn();
+  }
+  return { default: { Pool: MockPool }, Pool: MockPool };
 });
 
 import { withRLS, db } from '../db';
