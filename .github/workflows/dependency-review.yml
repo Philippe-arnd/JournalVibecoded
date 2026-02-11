@@ -24,8 +24,6 @@ jobs:
         with:
           # Fail on high/critical vulnerabilities
           fail-on-severity: high
-          # Allow licenses commonly used in web development
-          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD
           # Deny copyleft licenses that might cause issues
           deny-licenses: GPL-3.0, AGPL-3.0
           comment-summary-in-pr: always
