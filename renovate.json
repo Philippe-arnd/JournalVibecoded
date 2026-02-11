@@ -16,7 +16,7 @@
   "prConcurrentLimit": 3,
   "prCreation": "immediate",
   "prHourlyLimit": 0,
-  "baseBranches": [
+  "baseBranchPatterns": [
     "main"
   ],
   "separateMajorMinor": true,
@@ -78,51 +78,51 @@
     },
     {
       "description": "Group all ESLint packages together",
-      "matchPackagePatterns": [
-        "^eslint",
-        "eslint-"
-      ],
       "groupName": "ESLint packages",
-      "automerge": true
+      "automerge": true,
+      "matchPackageNames": [
+        "/^eslint/",
+        "/eslint-/"
+      ]
     },
     {
       "description": "Group all TypeScript packages together",
-      "matchPackagePatterns": [
-        "^typescript",
-        "^@types/"
-      ],
       "groupName": "TypeScript packages",
-      "automerge": true
+      "automerge": true,
+      "matchPackageNames": [
+        "/^typescript/",
+        "/^@types//"
+      ]
     },
     {
       "description": "Group all Vite packages together",
-      "matchPackagePatterns": [
-        "^vite",
-        "^@vitejs/"
-      ],
       "groupName": "Vite packages",
-      "automerge": false
+      "automerge": false,
+      "matchPackageNames": [
+        "/^vite/",
+        "/^@vitejs//"
+      ]
     },
     {
       "description": "Group React packages together",
-      "matchPackagePatterns": [
-        "^react",
-        "^@types/react"
-      ],
       "groupName": "React packages",
-      "automerge": false
+      "automerge": false,
+      "matchPackageNames": [
+        "/^react/",
+        "/^@types/react/"
+      ]
     },
     {
       "description": "Pin Docker base images",
       "matchDatasources": [
         "docker"
       ],
-      "matchPackagePatterns": [
-        "postgres",
-        "node"
-      ],
       "pinDigests": true,
-      "automerge": false
+      "automerge": false,
+      "matchPackageNames": [
+        "/postgres/",
+        "/node/"
+      ]
     }
   ],
   "vulnerabilityAlerts": {
