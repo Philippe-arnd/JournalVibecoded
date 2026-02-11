@@ -47,13 +47,15 @@ describe('RLS Helper Logic', () => {
 
     const result = await withRLS(mockUserId, mockCallback);
 
-    // Verify SET LOCAL was called
+    // Verify set_config was called to set app.current_user_id
     // Drizzle sql tags produce an object with a queryChunk or similar depending on version
     // We just check if execute was called at all with the expected SQL
     expect(mockTx.execute).toHaveBeenCalled();
     const callArgs = (mockTx.execute as any).mock.calls[0][0];
-    // Check if the SQL contains our SET LOCAL string
-    expect(JSON.stringify(callArgs)).toContain('SET LOCAL app.current_user_id');
+    // Check if the SQL contains our set_config call
+    const callArgsStr = JSON.stringify(callArgs);
+    expect(callArgsStr).toContain('set_config');
+    expect(callArgsStr).toContain('app.current_user_id');
     
     // Verify callback was called
     expect(mockCallback).toHaveBeenCalledWith(mockTx);
