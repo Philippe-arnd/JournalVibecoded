@@ -1,0 +1,172 @@
+name: 🔍 PR Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# Ensures only one validation runs per PR at a time
+concurrency:
+  group: pr-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Run All Validations
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Skip draft PRs
+    if: github.event.pull_request.draft == false
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: journal_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install root dependencies
+        run: npm ci
+
+      - name: 📦 Install client dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: 📦 Install server dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: 🔍 Run ESLint (Client)
+        run: npm run lint:client
+        continue-on-error: false
+
+      - name: 🏗️ Run Infrastructure Validation
+        run: npm run test:infra
+        continue-on-error: false
+
+      - name: 🗄️ Setup test database
+        env:
+          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/journal_test
+          DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
+          BETTER_AUTH_SECRET: test-secret-key-for-ci-minimum-32-characters
+          BETTER_AUTH_URL: http://localhost:3000
+        working-directory: server
+        run: |
+          echo "Running database migrations..."
+          npm run db:push
+
+      - name: 🧪 Run Server Tests
+        env:
+          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/journal_test
+          DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
+          BETTER_AUTH_SECRET: test-secret-key-for-ci-minimum-32-characters
+          BETTER_AUTH_URL: http://localhost:3000
+          NODE_ENV: test
+        run: npm run test:server
+        continue-on-error: false
+
+      - name: 🔒 Run RLS Policy Tests
+        env:
+          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/journal_test
+          DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
+          BETTER_AUTH_SECRET: test-secret-key-for-ci-minimum-32-characters
+          BETTER_AUTH_URL: http://localhost:3000
+        working-directory: server
+        run: npm run test:rls
+        continue-on-error: false
+
+      - name: 🏗️ Build Client
+        working-directory: client
+        run: npm run build
+        continue-on-error: false
+
+      - name: 🏗️ Build Server
+        working-directory: server
+        run: npm run build
+        continue-on-error: false
+
+      - name: ✅ Validation Summary
+        if: success()
+        run: |
+          echo "::notice::🎉 All validation checks passed!"
+          echo "- ✅ Linting"
+          echo "- ✅ Infrastructure validation"
+          echo "- ✅ Server tests"
+          echo "- ✅ RLS policy tests"
+          echo "- ✅ Client build"
+          echo "- ✅ Server build"
+
+      - name: 💬 Comment on PR (Success)
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## ✅ All Validation Checks Passed!
+
+            | Check | Status |
+            |-------|--------|
+            | 🔍 Linting | ✅ Passed |
+            | 🏗️ Infrastructure | ✅ Passed |
+            | 🧪 Server Tests | ✅ Passed |
+            | 🔒 RLS Policies | ✅ Passed |
+            | 📦 Client Build | ✅ Passed |
+            | 📦 Server Build | ✅ Passed |
+
+            **Ready to merge!** This PR will auto-merge if approved.
+
+            _Validated in workflow run [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: 💬 Comment on PR (Failure)
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## ❌ Validation Checks Failed
+
+            Some checks did not pass. Please review the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
+
+            Common fixes:
+            - Run \`npm run lint:client\` locally to fix linting errors
+            - Run \`npm run test:all\` locally to verify all tests pass
+            - Check that \`docker-compose.yml\` has no fixed port mappings
+            - Ensure Service Worker bypasses \`/api\` routes
+
+            _Failed in workflow run [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

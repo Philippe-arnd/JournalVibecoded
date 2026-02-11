@@ -1,0 +1,55 @@
+name: 🔒 Dependency Review
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    name: Review Dependencies for Vulnerabilities
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔒 Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          # Fail on high/critical vulnerabilities
+          fail-on-severity: high
+          # Allow licenses commonly used in web development
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD
+          # Deny copyleft licenses that might cause issues
+          deny-licenses: GPL-3.0, AGPL-3.0
+          comment-summary-in-pr: always
+
+      - name: 💬 Comment on PR (Vulnerability Found)
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## 🔒 Security Alert: Vulnerabilities Detected
+
+            High or critical severity vulnerabilities were found in the dependencies introduced by this PR.
+
+            **Action Required:**
+            - Review the dependency changes in this PR
+            - Check the security tab for detailed vulnerability information
+            - Update to patched versions or remove vulnerable dependencies
+            - Consider using \`npm audit fix\` to automatically fix issues
+
+            _See [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details._`;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

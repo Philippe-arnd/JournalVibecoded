@@ -1,0 +1,151 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "timezone": "America/New_York",
+  "schedule": [
+    "after 10pm every weekday",
+    "before 5am every weekday",
+    "every weekend"
+  ],
+  "labels": [
+    "dependencies",
+    "renovate"
+  ],
+  "prConcurrentLimit": 3,
+  "prCreation": "immediate",
+  "prHourlyLimit": 0,
+  "baseBranches": [
+    "dev"
+  ],
+  "separateMajorMinor": true,
+  "separateMinorPatch": false,
+  "rangeStrategy": "bump",
+  "semanticCommits": "enabled",
+  "commitMessagePrefix": "chore(deps):",
+  "commitMessageAction": "update",
+  "commitMessageExtra": "to {{newValue}}",
+  "automerge": true,
+  "automergeType": "pr",
+  "automergeStrategy": "squash",
+  "ignoreTests": false,
+  "packageRules": [
+    {
+      "description": "Auto-merge patch updates for non-major dependencies",
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Auto-merge minor updates for development dependencies",
+      "matchDepTypes": [
+        "devDependencies"
+      ],
+      "matchUpdateTypes": [
+        "minor"
+      ],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Require manual review for major updates",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false,
+      "labels": [
+        "dependencies",
+        "major-update"
+      ]
+    },
+    {
+      "description": "Require manual review for production runtime dependencies",
+      "matchDepTypes": [
+        "dependencies"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
+      "automerge": false,
+      "labels": [
+        "dependencies",
+        "runtime"
+      ]
+    },
+    {
+      "description": "Group all ESLint packages together",
+      "matchPackagePatterns": [
+        "^eslint",
+        "eslint-"
+      ],
+      "groupName": "ESLint packages",
+      "automerge": true
+    },
+    {
+      "description": "Group all TypeScript packages together",
+      "matchPackagePatterns": [
+        "^typescript",
+        "^@types/"
+      ],
+      "groupName": "TypeScript packages",
+      "automerge": true
+    },
+    {
+      "description": "Group all Vite packages together",
+      "matchPackagePatterns": [
+        "^vite",
+        "^@vitejs/"
+      ],
+      "groupName": "Vite packages",
+      "automerge": false
+    },
+    {
+      "description": "Group React packages together",
+      "matchPackagePatterns": [
+        "^react",
+        "^@types/react"
+      ],
+      "groupName": "React packages",
+      "automerge": false
+    },
+    {
+      "description": "Pin Docker base images",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackagePatterns": [
+        "postgres",
+        "node"
+      ],
+      "pinDigests": true,
+      "automerge": false
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "security",
+      "dependencies"
+    ],
+    "automerge": false
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 5am on monday"
+    ],
+    "automerge": true,
+    "automergeType": "pr"
+  },
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "🤖 Renovate Dashboard",
+  "dependencyDashboardHeader": "This dashboard shows all pending updates managed by Renovate Bot.",
+  "postUpdateOptions": [
+    "npmDedupe"
+  ],
+  "osvVulnerabilityAlerts": true
+}

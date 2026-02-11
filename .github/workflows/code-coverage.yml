@@ -1,0 +1,155 @@
+name: 📊 Code Coverage
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  coverage:
+    name: Generate Coverage Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: journal_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: |
+          npm ci
+          cd client && npm ci
+          cd ../server && npm ci
+
+      - name: 🗄️ Setup test database
+        env:
+          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/journal_test
+          DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
+          BETTER_AUTH_SECRET: test-secret-key-for-coverage-minimum-32-characters
+          BETTER_AUTH_URL: http://localhost:3000
+        working-directory: server
+        run: npm run db:push
+
+      - name: 🧪 Run Tests with Coverage
+        env:
+          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/journal_test
+          DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
+          BETTER_AUTH_SECRET: test-secret-key-for-coverage-minimum-32-characters
+          BETTER_AUTH_URL: http://localhost:3000
+          NODE_ENV: test
+        working-directory: server
+        run: npx vitest run --coverage --coverage.reporter=json-summary --coverage.reporter=text
+
+      - name: 📊 Coverage Summary
+        if: always()
+        working-directory: server
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            echo "## 📊 Code Coverage Report" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat coverage/coverage-summary.json | jq -r '
+              .total |
+              "Lines:      \(.lines.pct)%\n" +
+              "Statements: \(.statements.pct)%\n" +
+              "Functions:  \(.functions.pct)%\n" +
+              "Branches:   \(.branches.pct)%"
+            ' >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Coverage report not generated" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 💬 Comment Coverage on PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            let coverageComment = '## 📊 Code Coverage Report\n\n';
+
+            try {
+              const coveragePath = path.join(process.cwd(), 'server', 'coverage', 'coverage-summary.json');
+              const coverage = JSON.parse(fs.readFileSync(coveragePath, 'utf8'));
+              const total = coverage.total;
+
+              const getCoverageEmoji = (pct) => {
+                if (pct >= 80) return '✅';
+                if (pct >= 60) return '⚠️';
+                return '❌';
+              };
+
+              coverageComment += '| Metric | Coverage | Status |\n';
+              coverageComment += '|--------|----------|--------|\n';
+              coverageComment += `| Lines | ${total.lines.pct}% | ${getCoverageEmoji(total.lines.pct)} |\n`;
+              coverageComment += `| Statements | ${total.statements.pct}% | ${getCoverageEmoji(total.statements.pct)} |\n`;
+              coverageComment += `| Functions | ${total.functions.pct}% | ${getCoverageEmoji(total.functions.pct)} |\n`;
+              coverageComment += `| Branches | ${total.branches.pct}% | ${getCoverageEmoji(total.branches.pct)} |\n\n`;
+
+              if (total.lines.pct < 60) {
+                coverageComment += '⚠️ **Warning:** Code coverage is below 60%. Consider adding more tests.\n';
+              }
+            } catch (error) {
+              coverageComment += '⚠️ Could not generate coverage report.\n';
+              console.log('Error reading coverage:', error.message);
+            }
+
+            coverageComment += `\n_Generated in workflow run [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_`;
+
+            // Find and update or create comment
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('📊 Code Coverage Report')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                comment_id: botComment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: coverageComment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: coverageComment
+              });
+            }
