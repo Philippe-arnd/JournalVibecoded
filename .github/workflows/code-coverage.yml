@@ -51,16 +51,29 @@ jobs:
 
       - name: 🗄️ Setup test database
         env:
-          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/journal_test
           DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
           BETTER_AUTH_SECRET: test-secret-key-for-coverage-minimum-32-characters
           BETTER_AUTH_URL: http://localhost:3000
         working-directory: server
-        run: npm run db:push
+        run: |
+          echo "Creating restricted database user for RLS testing..."
+          PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "CREATE USER app_user WITH PASSWORD 'app_password';"
+          PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "GRANT CONNECT ON DATABASE journal_test TO app_user;"
+          PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "GRANT USAGE ON SCHEMA public TO app_user;"
+          PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;"
+          PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;"
+          PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;"
+          PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;"
+
+          echo "Running database migrations as admin..."
+          npm run db:push
+
+          echo "Applying RLS policies as admin..."
+          npm run db:rls
 
       - name: 🧪 Run Tests with Coverage
         env:
-          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/journal_test
+          DATABASE_URL: postgresql://app_user:app_password@localhost:5432/journal_test
           DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
           BETTER_AUTH_SECRET: test-secret-key-for-coverage-minimum-32-characters
           BETTER_AUTH_URL: http://localhost:3000
