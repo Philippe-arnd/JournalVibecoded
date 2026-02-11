@@ -85,6 +85,7 @@ jobs:
           DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
           BETTER_AUTH_SECRET: test-secret-key-for-ci-minimum-32-characters
           BETTER_AUTH_URL: http://localhost:3000
+          RESEND_API_KEY: re_test_key_for_ci
           NODE_ENV: test
         run: npm run test:server
         continue-on-error: false
@@ -95,6 +96,7 @@ jobs:
           DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
           BETTER_AUTH_SECRET: test-secret-key-for-ci-minimum-32-characters
           BETTER_AUTH_URL: http://localhost:3000
+          RESEND_API_KEY: re_test_key_for_ci
         working-directory: server
         run: npm run test:rls
         continue-on-error: false

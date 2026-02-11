@@ -64,6 +64,7 @@ jobs:
           DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
           BETTER_AUTH_SECRET: test-secret-key-for-coverage-minimum-32-characters
           BETTER_AUTH_URL: http://localhost:3000
+          RESEND_API_KEY: re_test_key_for_ci
           NODE_ENV: test
         working-directory: server
         run: npx vitest run --coverage --coverage.reporter=json-summary --coverage.reporter=text
