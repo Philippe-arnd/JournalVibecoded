@@ -1,23 +1,55 @@
-name: 🔍 PR Validation
+name: ✅ PR Validation
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
 
-# Ensures only one validation runs per PR at a time
 concurrency:
-  group: pr-validation-${{ github.event.pull_request.number }}
+  group: validation-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  validate:
-    name: Run All Validations
+  # Fast checks (no database needed) - run in parallel
+  quick-checks:
+    name: Quick Checks
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
+    if: github.event.pull_request.draft == false
 
-    # Skip draft PRs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.13.1'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci --prefer-offline
+          npm ci --prefix client --prefer-offline
+          npm ci --prefix server --prefer-offline
+
+      - name: Lint & Infrastructure validation (parallel)
+        run: |
+          npm run lint:client &
+          npm run test:infra &
+          wait
+
+      - name: Build (parallel)
+        run: |
+          npm run build --prefix client &
+          npm run build --prefix server &
+          wait
+
+  # Database tests - run in parallel with quick-checks
+  database-tests:
+    name: Database & API Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: github.event.pull_request.draft == false
 
     permissions:
@@ -40,42 +72,26 @@ jobs:
           - 5432:5432
 
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout
         uses: actions/checkout@v6
 
-      - name: 🟢 Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '24.13.1'
           cache: 'npm'
 
-      - name: 📦 Install root dependencies
-        run: npm ci
-
-      - name: 📦 Install client dependencies
-        working-directory: client
-        run: npm ci
-
-      - name: 📦 Install server dependencies
+      - name: Install server dependencies only
         working-directory: server
-        run: npm ci
+        run: npm ci --prefer-offline
 
-      - name: 🔍 Run ESLint (Client)
-        run: npm run lint:client
-        continue-on-error: false
-
-      - name: 🏗️ Run Infrastructure Validation
-        run: npm run test:infra
-        continue-on-error: false
-
-      - name: 🗄️ Setup test database
+      - name: Setup database
         env:
           DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
           BETTER_AUTH_SECRET: test-secret-key-for-ci-minimum-32-characters
           BETTER_AUTH_URL: http://localhost:3000
         working-directory: server
         run: |
-          echo "Creating restricted database user for RLS testing..."
           PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "CREATE USER app_user WITH PASSWORD 'app_password';"
           PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "GRANT CONNECT ON DATABASE journal_test TO app_user;"
           PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "GRANT USAGE ON SCHEMA public TO app_user;"
@@ -83,14 +99,10 @@ jobs:
           PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;"
           PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;"
           PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;"
-
-          echo "Running database migrations as admin..."
           npm run db:push
-
-          echo "Applying RLS policies as admin..."
           npm run db:rls
 
-      - name: 🧪 Run Server Tests
+      - name: Run tests with coverage
         env:
           DATABASE_URL: postgresql://app_user:app_password@localhost:5432/journal_test
           DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
@@ -98,88 +110,66 @@ jobs:
           BETTER_AUTH_URL: http://localhost:3000
           RESEND_API_KEY: re_test_key_for_ci
           NODE_ENV: test
-        run: npm run test:server
-        continue-on-error: false
-
-      - name: 🔒 Run RLS Policy Tests
-        env:
-          DATABASE_URL: postgresql://app_user:app_password@localhost:5432/journal_test
-          DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
-          BETTER_AUTH_SECRET: test-secret-key-for-ci-minimum-32-characters
-          BETTER_AUTH_URL: http://localhost:3000
-          RESEND_API_KEY: re_test_key_for_ci
         working-directory: server
-        run: npm run test:rls
-        continue-on-error: false
-
-      - name: 🏗️ Build Client
-        working-directory: client
-        run: npm run build
-        continue-on-error: false
-
-      - name: 🏗️ Build Server
-        working-directory: server
-        run: npm run build
-        continue-on-error: false
-
-      - name: ✅ Validation Summary
-        if: success()
         run: |
-          echo "::notice::🎉 All validation checks passed!"
-          echo "- ✅ Linting"
-          echo "- ✅ Infrastructure validation"
-          echo "- ✅ Server tests"
-          echo "- ✅ RLS policy tests"
-          echo "- ✅ Client build"
-          echo "- ✅ Server build"
+          npm run test:rls
+          npx vitest run --coverage --coverage.reporter=json-summary --coverage.reporter=text
 
-      - name: 💬 Comment on PR (Success)
-        if: success()
+      - name: Comment with results
+        if: always()
         uses: actions/github-script@v8
         with:
           script: |
-            const comment = `## ✅ All Validation Checks Passed!
+            const fs = require('fs');
+            const path = require('path');
 
-            | Check | Status |
-            |-------|--------|
-            | 🔍 Linting | ✅ Passed |
-            | 🏗️ Infrastructure | ✅ Passed |
-            | 🧪 Server Tests | ✅ Passed |
-            | 🔒 RLS Policies | ✅ Passed |
-            | 📦 Client Build | ✅ Passed |
-            | 📦 Server Build | ✅ Passed |
+            let comment = '## ✅ Validation Results\n\n';
+            comment += '| Check | Status |\n|:------|:-------|\n';
 
-            **Ready to merge!** This PR will auto-merge if approved.
+            // Quick checks status
+            const quickStatus = '${{ needs.quick-checks.result }}' || '${{ job.status }}';
+            comment += `| 🔍 **Linting & Infra** | ${quickStatus === 'success' ? '✅' : '❌'} |\n`;
+            comment += `| 🏗️ **Builds** | ${quickStatus === 'success' ? '✅' : '❌'} |\n`;
 
-            _Validated in workflow run [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_`;
+            // Database tests status
+            const dbStatus = '${{ job.status }}';
+            comment += `| 🧪 **Server Tests & RLS** | ${dbStatus === 'success' ? '✅' : '❌'} |\n`;
 
-            github.rest.issues.createComment({
+            // Coverage
+            try {
+              const coveragePath = path.join(process.cwd(), 'server', 'coverage', 'coverage-summary.json');
+              const coverage = JSON.parse(fs.readFileSync(coveragePath, 'utf8'));
+              const pct = coverage.total.lines.pct;
+              const emoji = pct >= 80 ? '✅' : pct >= 60 ? '⚠️' : '❌';
+              comment += `| 📊 **Code Coverage** | ${emoji} ${pct}% |\n`;
+            } catch (e) {
+              comment += '| 📊 **Code Coverage** | ⚠️ N/A |\n';
+            }
+
+            comment += '\n---\n*Validated in [run #${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*';
+
+            const { data: comments } = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: comment
             });
 
-      - name: 💬 Comment on PR (Failure)
-        if: failure()
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const comment = `## ❌ Validation Checks Failed
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Validation Results')
+            );
 
-            Some checks did not pass. Please review the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
-
-            Common fixes:
-            - Run \`npm run lint:client\` locally to fix linting errors
-            - Run \`npm run test:all\` locally to verify all tests pass
-            - Check that \`docker-compose.yml\` has no fixed port mappings
-            - Ensure Service Worker bypasses \`/api\` routes
-
-            _Failed in workflow run [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_`;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                comment_id: botComment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
