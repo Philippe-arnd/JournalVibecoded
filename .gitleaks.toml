@@ -10,17 +10,7 @@ useDefault = true
 [allowlist]
 description = "Allowlist for false positives"
 
-# Allow example/documentation files with fake credentials
-paths = [
-  '''.*IMPLEMENTATION\.md$''',
-  '''.*README\.md$''',
-  '''.*CLAUDE\.md$''',
-  '''.env.example$''',
-  '''_bmad-output/.*''',
-  '''docs/.*''',
-]
-
-# Allow test files
+# Allow test credential patterns
 regexes = [
   # Test credentials in workflow files
   '''test-secret-key''',
@@ -39,7 +29,25 @@ regexes = [
   '''TODO:.*''',
 ]
 
-# Allow specific test files and directories
+# Allow specific files and directories
+[[allowlist.paths]]
+regex = '''.*IMPLEMENTATION\.md$'''
+
+[[allowlist.paths]]
+regex = '''.*README\.md$'''
+
+[[allowlist.paths]]
+regex = '''.*CLAUDE\.md$'''
+
+[[allowlist.paths]]
+regex = '''\.env\.example$'''
+
+[[allowlist.paths]]
+regex = '''_bmad-output/.*'''
+
+[[allowlist.paths]]
+regex = '''docs/.*'''
+
 [[allowlist.paths]]
 regex = '''server/src/__tests__/.*'''
 
