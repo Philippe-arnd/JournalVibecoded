@@ -10,7 +10,31 @@ useDefault = true
 [allowlist]
 description = "Allowlist for false positives"
 
-# Allow test credential patterns
+# Path patterns (file paths to ignore)
+paths = [
+  # Documentation with examples
+  '''.*IMPLEMENTATION\.md$''',
+  '''.*README\.md$''',
+  '''.*CLAUDE\.md$''',
+  '''.env.example$''',
+  '''_bmad-output/.*''',
+  '''docs/.*''',
+
+  # Test files
+  '''server/src/__tests__/.*''',
+  '''.*\.test\.(js|ts|jsx|tsx)$''',
+  '''.*\.spec\.(js|ts|jsx|tsx)$''',
+
+  # Database migrations
+  '''server/drizzle/.*''',
+
+  # Build artifacts
+  '''node_modules/.*''',
+  '''dist/.*''',
+  '''build/.*''',
+]
+
+# Regex patterns for content (what to ignore in files)
 regexes = [
   # Test credentials in workflow files
   '''test-secret-key''',
@@ -28,43 +52,3 @@ regexes = [
   '''REPLACE_ME''',
   '''TODO:.*''',
 ]
-
-# Allow specific files and directories
-[[allowlist.paths]]
-regex = '''.*IMPLEMENTATION\.md$'''
-
-[[allowlist.paths]]
-regex = '''.*README\.md$'''
-
-[[allowlist.paths]]
-regex = '''.*CLAUDE\.md$'''
-
-[[allowlist.paths]]
-regex = '''\.env\.example$'''
-
-[[allowlist.paths]]
-regex = '''_bmad-output/.*'''
-
-[[allowlist.paths]]
-regex = '''docs/.*'''
-
-[[allowlist.paths]]
-regex = '''server/src/__tests__/.*'''
-
-[[allowlist.paths]]
-regex = '''.*\.test\.(js|ts|jsx|tsx)$'''
-
-[[allowlist.paths]]
-regex = '''.*\.spec\.(js|ts|jsx|tsx)$'''
-
-[[allowlist.paths]]
-regex = '''server/drizzle/.*'''
-
-[[allowlist.paths]]
-regex = '''node_modules/.*'''
-
-[[allowlist.paths]]
-regex = '''dist/.*'''
-
-[[allowlist.paths]]
-regex = '''build/.*'''
