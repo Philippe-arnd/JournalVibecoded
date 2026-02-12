@@ -1,0 +1,54 @@
+# Gitleaks Configuration
+# https://github.com/gitleaks/gitleaks#configuration
+
+title = "Gitleaks Config for Journal App"
+
+[extend]
+# Use default gitleaks config as base
+useDefault = true
+
+[allowlist]
+description = "Allowlist for false positives"
+
+# Path patterns (file paths to ignore)
+paths = [
+  # Documentation with examples
+  '''.*IMPLEMENTATION\.md$''',
+  '''.*README\.md$''',
+  '''.*CLAUDE\.md$''',
+  '''.env.example$''',
+  '''_bmad-output/.*''',
+  '''docs/.*''',
+
+  # Test files
+  '''server/src/__tests__/.*''',
+  '''.*\.test\.(js|ts|jsx|tsx)$''',
+  '''.*\.spec\.(js|ts|jsx|tsx)$''',
+
+  # Database migrations
+  '''server/drizzle/.*''',
+
+  # Build artifacts
+  '''node_modules/.*''',
+  '''dist/.*''',
+  '''build/.*''',
+]
+
+# Regex patterns for content (what to ignore in files)
+regexes = [
+  # Test credentials in workflow files
+  '''test-secret-key''',
+  '''test_password''',
+  '''test-password''',
+  '''test_key''',
+  '''re_test_key''',
+
+  # Example/placeholder patterns
+  '''your_.*_here''',
+  '''your-.*-here''',
+  '''sk_test_.*example''',
+  '''example.*key''',
+  '''placeholder''',
+  '''REPLACE_ME''',
+  '''TODO:.*''',
+]

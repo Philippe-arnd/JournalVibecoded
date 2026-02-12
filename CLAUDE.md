@@ -228,73 +228,78 @@ All tests must pass before merging to main.
 
 **Automated Security & Performance Workflow** (`.github/workflows/security-performance.yml`):
 
-The repository includes a fast, parallel security and performance checking workflow that runs on every PR. Total execution time: **60-75 seconds**.
+Fast, parallel security and performance checks run on every PR. **Optimized execution: 20-30 seconds**.
 
-**Workflow Jobs** (run in parallel):
+**Workflow Jobs** (3 parallel checks + report):
 
-1. **🔍 Secret Detection (Gitleaks)** - 5-10s
-   - Scans git history for exposed API keys, passwords, and credentials
+1. **🔍 Secret Detection** - 5-10s
+   - Scans git history for exposed credentials
    - Blocks PR on failure
-   - Configuration: `.gitleaksignore`
+   - Configuration: `.gitleaks.toml` (allowlist patterns)
 
-2. **🛡️ SAST Security Scan (Semgrep)** - 20-30s
-   - Static Application Security Testing for vulnerabilities
-   - Scans TypeScript/JavaScript/React/Node.js code
-   - Blocks PR on high/critical severity issues
-   - Configuration: `.semgrep.yml` (custom rules), `.semgrepignore`
+2. **🛡️ Security Scan** - 15-20s
+   - SAST scanning with 10 custom rules
+   - Blocks on critical vulnerabilities only
+   - Configuration: `.semgrep.yml`, `.semgrepignore`
 
-3. **📦 Bundle Size Analysis** - 60-75s
-   - Monitors client bundle size for performance regressions
-   - Warns on >10% increase (does not block)
-   - Baselines: JS: 543 KB, CSS: 43 KB (uncompressed)
+3. **📦 Bundle Size** - 10-15s
+   - Tracks client bundle size changes
+   - Warns on >10% increase (non-blocking)
+   - Baselines: JS 543 KB, CSS 43 KB
 
-**Local Testing Commands**:
+4. **📋 Report Generation** - 2-3s
+   - Consolidated PR comment with results
+   - Action items if issues found
+   - Collapsible details for bundle changes
+
+**Report Format:**
+- ✅ **All Clear**: Compact success message
+- ⚠️ **Warnings**: Recommendations shown
+- ❌ **Issues Found**: Actionable checklist with links
+
+**Local Testing:**
 
 ```bash
-# Test secret detection locally
-docker run -v $(pwd):/path zricethezav/gitleaks:latest detect --source=/path
+# Secret detection
+docker run -v $(pwd):/path zricethezav/gitleaks:latest detect --source=/path --config=.gitleaks.toml
 
-# Test SAST security scanning locally
-docker run --rm -v $(pwd):/src semgrep/semgrep semgrep --config=auto /src
+# SAST security scan
+docker run --rm -v $(pwd):/src semgrep/semgrep semgrep --config=.semgrep.yml /src
 
-# Check bundle size locally
+# Bundle size check
 cd client && npm run build
 find dist/assets -name "*.js" -exec du -ch {} + | grep total
-find dist/assets -name "*.css" -exec du -ch {} + | grep total
 ```
 
-**Custom Security Rules** (`.semgrep.yml`):
-- Weak encryption key detection
-- RLS bypass risk detection (direct DB queries without RLS() wrapper)
-- Missing authentication middleware
-- Hardcoded secrets
-- Insecure cookie configuration
-- SQL injection risks
-- XSS vulnerabilities
-- Missing input validation
-- Insecure random generation
-- Unencrypted sensitive data storage
+**Custom Security Rules** (10 rules in `.semgrep.yml`):
+1. Weak encryption keys (client encryption)
+2. RLS bypass risk (database queries without wrapper)
+3. Missing auth middleware (unprotected API routes)
+4. Hardcoded secrets (API keys, passwords)
+5. Insecure cookies (missing secure flag)
+6. SQL injection (string concatenation in queries)
+7. XSS vulnerabilities (unsafe HTML rendering)
+8. Missing input validation (API routes)
+9. Insecure random (Math.random for security values)
+10. Unencrypted storage (sensitive data in localStorage)
 
-**Workflow Behavior**:
-- **Blocks PRs** on: Exposed secrets, critical security vulnerabilities
-- **Warns (doesn't block)** on: Bundle size >10% increase, low-severity findings
-- Results posted as consolidated PR comment
-- Updates existing comment on subsequent pushes
+**Gitleaks Configuration** (`.gitleaks.toml`):
+- Allowlist patterns for docs and test files
+- Excludes example credentials (test-*, placeholder-*)
+- Ignores workflow test values
+- Path-based exclusions for `_bmad-output/`, test directories
 
-**Updating Bundle Size Baselines**:
+**Report Features**:
+- Compact table format (easy to scan)
+- Expandable bundle details (only when changed)
+- Actionable checklist for failures
+- Direct links to workflow logs
+- Single comment (updates automatically)
 
-If bundle size legitimately increases (e.g., new dependencies):
-1. Document reason in PR description
-2. Update baselines in workflow file: `.github/workflows/security-performance.yml`
-3. Search for `JS_BASELINE` and `CSS_BASELINE` variables
-4. Adjust values to new baseline (uncompressed KB)
-
-**Branch Protection**:
-
-The following checks are required before merging to main:
-- ✅ 🔍 Secret Detection (required)
-- ✅ 🛡️ SAST Security Scan (required)
-- 📦 Bundle Size Analysis (optional, warn-only)
+**Updating Baselines**:
+Edit `.github/workflows/security-performance.yml`:
+- Update `JS_BASE=543` and `CSS_BASE=43` variables
+- Document reason in PR description
 
 ### Styling System
 
