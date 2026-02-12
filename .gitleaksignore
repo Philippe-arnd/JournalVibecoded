@@ -1,30 +1,6 @@
 # Gitleaks Ignore File
 # Excludes false positives from secret detection
+# Format: Use fingerprints from detected leaks or add gitleaks:allow comments
 
-# Example environment files (contain placeholder values only)
-.env.example
-**/.env.example
-
-# GitHub workflow test credentials (intentional test values)
-.github/workflows/pr-validation.yml:BETTER_AUTH_SECRET
-.github/workflows/pr-validation.yml:POSTGRES_PASSWORD
-.github/workflows/code-coverage.yml:BETTER_AUTH_SECRET
-.github/workflows/code-coverage.yml:POSTGRES_PASSWORD
-
-# Test fixtures and mock data
-server/src/__tests__/**/*
-client/src/data/**/*
-
-# Database migrations (may contain test data)
-server/drizzle/**/*
-
-# Documentation examples
-README.md
-CLAUDE.md
-**/CLAUDE.md
-_bmad-output/**/*
-
-# Build artifacts
-dist/**/*
-build/**/*
-node_modules/**/*
+# Documentation with example fake API keys for testing demonstrations
+ef5fed4d6ec18beca277e084f20cbad495cfa681:SECURITY-PERFORMANCE-IMPLEMENTATION.md:stripe-access-token:205
