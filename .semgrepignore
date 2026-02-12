@@ -1,0 +1,46 @@
+# Semgrep Ignore File
+# Excludes files from SAST security scanning
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+**/dist/
+**/build/
+*.min.js
+*.bundle.js
+
+# Test files (allow test credentials and patterns)
+**/__tests__/**
+**/*.test.js
+**/*.test.ts
+**/*.test.jsx
+**/*.test.tsx
+**/*.spec.js
+**/*.spec.ts
+
+# Database migrations (generated code)
+server/drizzle/**/*
+**/migrations/**/*
+
+# Configuration files
+*.config.js
+*.config.ts
+vite.config.js
+tailwind.config.js
+postcss.config.js
+
+# Documentation
+*.md
+_bmad-output/**/*
+
+# Lock files
+package-lock.json
+**/package-lock.json
+
+# Environment examples
+.env.example
+**/.env.example

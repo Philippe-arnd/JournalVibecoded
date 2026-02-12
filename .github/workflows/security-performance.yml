@@ -1,0 +1,332 @@
+name: 🔒🚀 Security & Performance
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# Ensures only one security check runs per PR at a time
+concurrency:
+  group: security-performance-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # Job 1: Secret Detection (5-10 seconds)
+  secret-detection:
+    name: 🔍 Secret Detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    # Skip draft PRs
+    if: github.event.pull_request.draft == false
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: 📥 Checkout repository (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for secret detection
+
+      - name: 🔍 Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
+
+      - name: 📊 Save result
+        if: always()
+        run: |
+          if [ $? -eq 0 ]; then
+            echo "status=✅ Passed" >> $GITHUB_ENV
+            echo "details=No secrets detected" >> $GITHUB_ENV
+          else
+            echo "status=❌ Failed" >> $GITHUB_ENV
+            echo "details=Secrets detected - check logs" >> $GITHUB_ENV
+          fi
+
+  # Job 2: SAST Security Scan (20-30 seconds)
+  sast-scan:
+    name: 🛡️ SAST Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    # Skip draft PRs
+    if: github.event.pull_request.draft == false
+
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🛡️ Run Semgrep
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/javascript
+            p/typescript
+            p/react
+            p/nodejs
+            .semgrep.yml
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+      - name: 📊 Parse Semgrep results
+        if: always()
+        id: semgrep-results
+        run: |
+          # Check for SARIF output or use exit code
+          if [ -f semgrep.sarif ]; then
+            CRITICAL=$(jq '[.runs[].results[] | select(.level == "error")] | length' semgrep.sarif 2>/dev/null || echo "0")
+            WARNINGS=$(jq '[.runs[].results[] | select(.level == "warning")] | length' semgrep.sarif 2>/dev/null || echo "0")
+            echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+            echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+          else
+            echo "critical=0" >> $GITHUB_OUTPUT
+            echo "warnings=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📊 Save result
+        if: always()
+        run: |
+          CRITICAL="${{ steps.semgrep-results.outputs.critical }}"
+          WARNINGS="${{ steps.semgrep-results.outputs.warnings }}"
+
+          if [ "$CRITICAL" = "0" ]; then
+            echo "status=✅ Passed" >> $GITHUB_ENV
+            echo "details=No critical vulnerabilities found ($WARNINGS warnings)" >> $GITHUB_ENV
+          else
+            echo "status=❌ Failed" >> $GITHUB_ENV
+            echo "details=$CRITICAL critical issues found" >> $GITHUB_ENV
+          fi
+
+  # Job 3: Bundle Size Analysis (60-75 seconds)
+  bundle-size:
+    name: 📦 Bundle Size Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    # Skip draft PRs
+    if: github.event.pull_request.draft == false
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: 📦 Install client dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: 🏗️ Build client
+        working-directory: client
+        run: npm run build
+
+      - name: 📊 Analyze bundle size
+        id: bundle-analysis
+        working-directory: client
+        run: |
+          # Get JavaScript bundle size (uncompressed KB)
+          JS_SIZE=$(find dist/assets -name "*.js" -exec du -b {} + | awk '{sum+=$1} END {printf "%.0f", sum/1024}')
+
+          # Get CSS bundle size (uncompressed KB)
+          CSS_SIZE=$(find dist/assets -name "*.css" -exec du -b {} + | awk '{sum+=$1} END {printf "%.0f", sum/1024}')
+
+          # Get gzipped sizes
+          JS_GZIP=$(find dist/assets -name "*.js" -exec gzip -c {} \; | wc -c | awk '{printf "%.0f", $1/1024}')
+          CSS_GZIP=$(find dist/assets -name "*.css" -exec gzip -c {} \; | wc -c | awk '{printf "%.0f", $1/1024}')
+
+          # Baselines from plan (uncompressed KB)
+          JS_BASELINE=543
+          CSS_BASELINE=43
+
+          # Calculate percentage changes
+          JS_CHANGE=$(awk "BEGIN {printf \"%.1f\", (($JS_SIZE - $JS_BASELINE) / $JS_BASELINE) * 100}")
+          CSS_CHANGE=$(awk "BEGIN {printf \"%.1f\", (($CSS_SIZE - $CSS_BASELINE) / $CSS_BASELINE) * 100}")
+
+          # Save to outputs
+          echo "js_size=$JS_SIZE" >> $GITHUB_OUTPUT
+          echo "css_size=$CSS_SIZE" >> $GITHUB_OUTPUT
+          echo "js_gzip=$JS_GZIP" >> $GITHUB_OUTPUT
+          echo "css_gzip=$CSS_GZIP" >> $GITHUB_OUTPUT
+          echo "js_change=$JS_CHANGE" >> $GITHUB_OUTPUT
+          echo "css_change=$CSS_CHANGE" >> $GITHUB_OUTPUT
+
+          # Determine status (warn on >10% increase)
+          if (( $(echo "$JS_CHANGE > 10" | bc -l) )) || (( $(echo "$CSS_CHANGE > 10" | bc -l) )); then
+            echo "status=⚠️ Warning" >> $GITHUB_ENV
+            echo "details=Bundle size increased by >10%" >> $GITHUB_ENV
+          else
+            echo "status=✅ Passed" >> $GITHUB_ENV
+            echo "details=Bundle size within acceptable range" >> $GITHUB_ENV
+          fi
+
+      - name: 💬 Generate bundle report
+        if: always()
+        id: bundle-report
+        run: |
+          JS_SIZE="${{ steps.bundle-analysis.outputs.js_size }}"
+          CSS_SIZE="${{ steps.bundle-analysis.outputs.css_size }}"
+          JS_GZIP="${{ steps.bundle-analysis.outputs.js_gzip }}"
+          CSS_GZIP="${{ steps.bundle-analysis.outputs.css_gzip }}"
+          JS_CHANGE="${{ steps.bundle-analysis.outputs.js_change }}"
+          CSS_CHANGE="${{ steps.bundle-analysis.outputs.css_change }}"
+
+          # Format changes with emoji indicators
+          if (( $(echo "$JS_CHANGE > 10" | bc -l) )); then
+            JS_INDICATOR="⚠️"
+          elif (( $(echo "$JS_CHANGE > 0" | bc -l) )); then
+            JS_INDICATOR="📈"
+          elif (( $(echo "$JS_CHANGE < 0" | bc -l) )); then
+            JS_INDICATOR="📉"
+          else
+            JS_INDICATOR="➡️"
+          fi
+
+          if (( $(echo "$CSS_CHANGE > 10" | bc -l) )); then
+            CSS_INDICATOR="⚠️"
+          elif (( $(echo "$CSS_CHANGE > 0" | bc -l) )); then
+            CSS_INDICATOR="📈"
+          elif (( $(echo "$CSS_CHANGE < 0" | bc -l) )); then
+            CSS_INDICATOR="📉"
+          else
+            CSS_INDICATOR="➡️"
+          fi
+
+          cat << EOF > bundle-report.md
+          | Asset | Size | Gzipped | Change | Status |
+          |-------|------|---------|--------|--------|
+          | JavaScript | ${JS_SIZE} KB | ${JS_GZIP} KB | ${JS_CHANGE}% | ${JS_INDICATOR} |
+          | CSS | ${CSS_SIZE} KB | ${CSS_GZIP} KB | ${CSS_CHANGE}% | ${CSS_INDICATOR} |
+
+          **Baselines:** JS: 543 KB, CSS: 43 KB (uncompressed)
+          EOF
+
+          cat bundle-report.md
+
+      - name: 📊 Upload bundle report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analysis
+          path: bundle-report.md
+          retention-days: 30
+
+  # Job 4: Consolidated Summary
+  summary:
+    name: 📋 Summary & PR Comment
+    runs-on: ubuntu-latest
+    needs: [secret-detection, sast-scan, bundle-size]
+    if: always()
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: 📥 Download bundle report
+        uses: actions/download-artifact@v4
+        with:
+          name: bundle-analysis
+
+      - name: 💬 Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Get job results
+            const secretDetection = '${{ needs.secret-detection.result }}';
+            const sastScan = '${{ needs.sast-scan.result }}';
+            const bundleSize = '${{ needs.bundle-size.result }}';
+
+            // Read bundle report
+            let bundleReport = '';
+            try {
+              bundleReport = fs.readFileSync('bundle-report.md', 'utf8');
+            } catch (e) {
+              bundleReport = '_Bundle report unavailable_';
+            }
+
+            // Determine overall status
+            const failed = [secretDetection, sastScan].includes('failure');
+            const warnings = bundleSize === 'failure';
+
+            let overallStatus = '✅ All Checks Passed';
+            if (failed) {
+              overallStatus = '❌ Security Checks Failed';
+            } else if (warnings) {
+              overallStatus = '⚠️ Passed with Warnings';
+            }
+
+            // Format status emoji
+            const statusEmoji = (result) => {
+              if (result === 'success') return '✅';
+              if (result === 'failure') return '❌';
+              return '⚠️';
+            };
+
+            const comment = `## 🔒🚀 Security & Performance Report
+
+            ### ${overallStatus}
+
+            | Check | Status |
+            |-------|--------|
+            | 🔍 Secret Detection | ${statusEmoji(secretDetection)} ${secretDetection === 'success' ? 'Passed' : 'Failed'} |
+            | 🛡️ SAST Security | ${statusEmoji(sastScan)} ${sastScan === 'success' ? 'Passed' : 'Failed'} |
+            | 📦 Bundle Size | ${statusEmoji(bundleSize)} ${bundleSize === 'success' ? 'Passed' : 'Warning'} |
+
+            ### 📦 Bundle Size Analysis
+
+            ${bundleReport}
+
+            ---
+
+            ${failed ? '**⚠️ Action Required:** Fix security issues before merging.' : '**✅ No security issues detected.**'}
+
+            _Security scan completed in workflow run [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            const existingComment = comments.find(comment =>
+              comment.user.type === 'Bot' && comment.body.includes('🔒🚀 Security & Performance Report')
+            );
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                comment_id: existingComment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }

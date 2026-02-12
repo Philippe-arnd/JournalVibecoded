@@ -1,0 +1,224 @@
+# Custom Semgrep Rules for Journal App
+# Targets security-critical patterns specific to this codebase
+
+rules:
+  # 1. Weak Encryption Key Detection
+  - id: weak-encryption-key
+    patterns:
+      - pattern: |
+          const encryptionKey = $KEY
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: ^["'][a-zA-Z0-9]{1,15}["']$
+    message: |
+      Weak encryption key detected. Encryption keys should be:
+      - At least 32 characters long
+      - Randomly generated
+      - Stored in environment variables (VITE_ENCRYPTION_KEY)
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    paths:
+      include:
+        - client/src/utils/encryption.js
+
+  # 2. RLS Bypass Risk - Direct Database Query Without User Context
+  - id: rls-bypass-risk
+    patterns:
+      - pattern-either:
+          - pattern: db.select().from($TABLE)
+          - pattern: db.insert($TABLE)
+          - pattern: db.update($TABLE)
+          - pattern: db.delete().from($TABLE)
+      - pattern-not-inside: RLS(...)
+    message: |
+      Potential RLS bypass detected. Database queries must be wrapped with RLS() helper
+      to enforce Row-Level Security policies. Use: RLS(userId, db.select()...)
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    paths:
+      include:
+        - server/src/routes/**
+        - server/src/server.ts
+
+  # 3. Missing Authentication Middleware
+  - id: missing-auth-middleware
+    patterns:
+      - pattern-either:
+          - pattern: |
+              app.get('/api/$PATH', async (req, res) => { ... })
+          - pattern: |
+              app.post('/api/$PATH', async (req, res) => { ... })
+          - pattern: |
+              app.put('/api/$PATH', async (req, res) => { ... })
+          - pattern: |
+              app.delete('/api/$PATH', async (req, res) => { ... })
+      - pattern-not: |
+          app.$METHOD('/api/$PATH', requireAuth, ...)
+      - metavariable-regex:
+          metavariable: $PATH
+          regex: ^(?!auth/).*
+    message: |
+      API route missing authentication middleware. Protected routes must use
+      requireAuth middleware: app.get('/api/...', requireAuth, handler)
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    paths:
+      include:
+        - server/src/server.ts
+        - server/src/routes/**
+
+  # 4. Hardcoded Secret Pattern
+  - id: hardcoded-secret
+    patterns:
+      - pattern-either:
+          - pattern: const $VAR = "$SECRET"
+          - pattern: let $VAR = "$SECRET"
+          - pattern: var $VAR = "$SECRET"
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (secret|password|token|api_key|apikey|auth_key|private_key)
+      - metavariable-regex:
+          metavariable: $SECRET
+          regex: ^(?!process\.env\.)(?!.*test.*)[a-zA-Z0-9+/=]{16,}$
+    message: |
+      Hardcoded secret detected. Secrets should be stored in environment variables:
+      - BETTER_AUTH_SECRET
+      - ANTHROPIC_API_KEY
+      - RESEND_API_KEY
+      - VITE_ENCRYPTION_KEY
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+
+  # 5. Insecure Cookie Configuration
+  - id: insecure-cookie-config
+    patterns:
+      - pattern: |
+          res.cookie($NAME, $VALUE, { ..., secure: false, ... })
+      - pattern-not-inside: |
+          if ($CONDITION) { ... }
+    message: |
+      Insecure cookie configuration detected. Cookies should always use secure: true
+      in production. Better Auth handles this automatically via BETTER_AUTH_URL.
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    paths:
+      include:
+        - server/**
+
+  # 6. SQL Injection Risk - String Concatenation in Queries
+  - id: sql-injection-risk
+    patterns:
+      - pattern-either:
+          - pattern: db.execute(`... ${$VAR} ...`)
+          - pattern: db.run(`... ${$VAR} ...`)
+          - pattern: client.query(`... ${$VAR} ...`)
+      - pattern-not: db.execute(`... ${$CONST} ...`)
+    message: |
+      Potential SQL injection risk. Use parameterized queries with Drizzle ORM
+      instead of string concatenation. Example: db.select().where(eq(table.id, userId))
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    paths:
+      include:
+        - server/**
+
+  # 7. XSS Risk - Unsafe HTML Rendering
+  - id: xss-risk-dangerous-html
+    patterns:
+      - pattern-either:
+          - pattern: "dangerouslySetInnerHTML={{ __html: $VAR }}"
+          - pattern: "innerHTML = $VAR"
+      - pattern-not: "dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize($VAR) }}"
+    message: |
+      Potential XSS vulnerability. Avoid dangerouslySetInnerHTML unless absolutely necessary.
+      If required, sanitize HTML with DOMPurify before rendering.
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+      - jsx
+      - tsx
+    paths:
+      include:
+        - client/**
+
+  # 8. Missing Input Validation on API Routes
+  - id: missing-input-validation
+    patterns:
+      - pattern: |
+          app.$METHOD('/api/$PATH', $MIDDLEWARE, async (req, res) => {
+            ...
+            const $VAR = req.body.$FIELD
+            ...
+          })
+      - pattern-not-inside: |
+          if (!$VAR || ...) { ... }
+      - pattern-not-inside: |
+          if (typeof $VAR !== ...) { ... }
+    message: |
+      Missing input validation. API routes should validate all user input:
+      - Check for required fields
+      - Validate data types
+      - Sanitize string inputs
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    paths:
+      include:
+        - server/src/server.ts
+        - server/src/routes/**
+
+  # 9. Insecure Random Generation
+  - id: insecure-random
+    patterns:
+      - pattern-either:
+          - pattern: Math.random()
+          - pattern: Date.now()
+      - pattern-inside: |
+          const $VAR = ...
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (token|secret|id|key|nonce|salt)
+    message: |
+      Insecure random generation for security-sensitive value. Use crypto.randomBytes()
+      or crypto.getRandomValues() for cryptographically secure random values.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+
+  # 10. Unencrypted Sensitive Data Storage
+  - id: unencrypted-sensitive-data
+    patterns:
+      - pattern-either:
+          - pattern: localStorage.setItem($KEY, $VALUE)
+          - pattern: sessionStorage.setItem($KEY, $VALUE)
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: (password|token|secret|key|credential)
+      - pattern-not: localStorage.setItem($KEY, encrypt($VALUE))
+    message: |
+      Storing sensitive data unencrypted in browser storage. Consider:
+      - Using encrypted storage (encryption.js utility)
+      - Storing in HTTP-only cookies instead
+      - Not storing sensitive data client-side at all
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    paths:
+      include:
+        - client/**

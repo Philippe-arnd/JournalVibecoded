@@ -224,6 +224,78 @@ npm run --prefix server test:rls  # Test Row-Level Security policies
 
 All tests must pass before merging to main.
 
+### Security & Performance Testing
+
+**Automated Security & Performance Workflow** (`.github/workflows/security-performance.yml`):
+
+The repository includes a fast, parallel security and performance checking workflow that runs on every PR. Total execution time: **60-75 seconds**.
+
+**Workflow Jobs** (run in parallel):
+
+1. **🔍 Secret Detection (Gitleaks)** - 5-10s
+   - Scans git history for exposed API keys, passwords, and credentials
+   - Blocks PR on failure
+   - Configuration: `.gitleaksignore`
+
+2. **🛡️ SAST Security Scan (Semgrep)** - 20-30s
+   - Static Application Security Testing for vulnerabilities
+   - Scans TypeScript/JavaScript/React/Node.js code
+   - Blocks PR on high/critical severity issues
+   - Configuration: `.semgrep.yml` (custom rules), `.semgrepignore`
+
+3. **📦 Bundle Size Analysis** - 60-75s
+   - Monitors client bundle size for performance regressions
+   - Warns on >10% increase (does not block)
+   - Baselines: JS: 543 KB, CSS: 43 KB (uncompressed)
+
+**Local Testing Commands**:
+
+```bash
+# Test secret detection locally
+docker run -v $(pwd):/path zricethezav/gitleaks:latest detect --source=/path
+
+# Test SAST security scanning locally
+docker run --rm -v $(pwd):/src semgrep/semgrep semgrep --config=auto /src
+
+# Check bundle size locally
+cd client && npm run build
+find dist/assets -name "*.js" -exec du -ch {} + | grep total
+find dist/assets -name "*.css" -exec du -ch {} + | grep total
+```
+
+**Custom Security Rules** (`.semgrep.yml`):
+- Weak encryption key detection
+- RLS bypass risk detection (direct DB queries without RLS() wrapper)
+- Missing authentication middleware
+- Hardcoded secrets
+- Insecure cookie configuration
+- SQL injection risks
+- XSS vulnerabilities
+- Missing input validation
+- Insecure random generation
+- Unencrypted sensitive data storage
+
+**Workflow Behavior**:
+- **Blocks PRs** on: Exposed secrets, critical security vulnerabilities
+- **Warns (doesn't block)** on: Bundle size >10% increase, low-severity findings
+- Results posted as consolidated PR comment
+- Updates existing comment on subsequent pushes
+
+**Updating Bundle Size Baselines**:
+
+If bundle size legitimately increases (e.g., new dependencies):
+1. Document reason in PR description
+2. Update baselines in workflow file: `.github/workflows/security-performance.yml`
+3. Search for `JS_BASELINE` and `CSS_BASELINE` variables
+4. Adjust values to new baseline (uncompressed KB)
+
+**Branch Protection**:
+
+The following checks are required before merging to main:
+- ✅ 🔍 Secret Detection (required)
+- ✅ 🛡️ SAST Security Scan (required)
+- 📦 Bundle Size Analysis (optional, warn-only)
+
 ### Styling System
 
 **Frontend Styling** (Tailwind CSS 4.0)
@@ -301,9 +373,13 @@ VITE_API_URL=http://localhost:3000/api
 Before proposing changes or merging code:
 1. Proactively check for linting errors: `npm run lint:client`
 2. Run full test suite: `npm run test:all`
-3. Verify Docker deployment impact and `docker-compose.yml` compliance
-4. Ensure `.env.example` remains updated with any new variables
-5. Maintain `app.set('trust proxy', true)` and Service Worker API bypass in any infrastructure changes
+3. Run local security checks if modifying sensitive areas (auth, encryption, database):
+   - Secret detection: `docker run -v $(pwd):/path zricethezav/gitleaks:latest detect --source=/path`
+   - SAST scan: `docker run --rm -v $(pwd):/src semgrep/semgrep semgrep --config=auto /src`
+4. Verify Docker deployment impact and `docker-compose.yml` compliance
+5. Ensure `.env.example` remains updated with any new variables
+6. Maintain `app.set('trust proxy', true)` and Service Worker API bypass in any infrastructure changes
+7. Check bundle size impact if adding new client dependencies: `cd client && npm run build`
 
 ## Important Notes
 
