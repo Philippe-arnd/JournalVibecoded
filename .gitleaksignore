@@ -1,0 +1,6 @@
+# Gitleaks Ignore File
+# Excludes false positives from secret detection
+# Format: Use fingerprints from detected leaks or add gitleaks:allow comments
+
+# Documentation with example fake API keys for testing demonstrations
+ef5fed4d6ec18beca277e084f20cbad495cfa681:SECURITY-PERFORMANCE-IMPLEMENTATION.md:stripe-access-token:205
