@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import app from '../server';
 
@@ -7,6 +7,13 @@ describe('Server Health', () => {
         const response = await request(app).get('/health');
         expect(response.status).toBe(200);
         expect(response.text).toBe('OK');
+    });
+
+    it('should log auth requests', async () => {
+        const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        await request(app).get('/api/auth/test');
+        expect(spy).toHaveBeenCalledWith(expect.stringContaining('Auth Request: GET /test'), undefined);
+        spy.mockRestore();
     });
 
     it('should return 404 for unknown routes', async () => {
