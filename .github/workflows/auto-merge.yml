@@ -3,10 +3,10 @@ name: 🤖 Auto-Merge PR
 on:
   workflow_run:
     workflows:
-      - "🔍 PR Validation"
-      - "🐳 Docker Build Validation"
+      - "✅ PR Validation"
+      - "🔒🚀 Security & Performance"
       - "🔒 Dependency Review"
-      - "📊 Code Coverage"
+      - "🐳 Docker Validation"
     types:
       - completed
     branches:
@@ -95,19 +95,20 @@ jobs:
 
             console.log(`Found ${checks.check_runs.length} check runs`);
 
-            // Required workflows that must pass
-            const requiredWorkflows = [
-              '🔍 PR Validation',
-              '🐳 Docker Build Validation',
-              '🔒 Dependency Review',
-              '📊 Code Coverage'
+            // Required checks from GitHub Ruleset
+            const requiredChecks = [
+              'Quick Checks',
+              'Database & API Tests',
+              '🔍 Secret Detection',
+              '🛡️ Security Scan',
+              'Review Dependencies for Vulnerabilities'
             ];
 
-            // Check if all required workflows have passed
-            const workflowStatus = {};
+            // Check if all required checks have passed
+            const checkStatus = {};
             for (const check of checks.check_runs) {
-              if (requiredWorkflows.includes(check.name)) {
-                workflowStatus[check.name] = {
+              if (requiredChecks.includes(check.name)) {
+                checkStatus[check.name] = {
                   status: check.status,
                   conclusion: check.conclusion
                 };
@@ -115,15 +116,15 @@ jobs:
               }
             }
 
-            // Verify all required workflows are present and successful
-            const allPresent = requiredWorkflows.every(name => name in workflowStatus);
-            const allSuccessful = requiredWorkflows.every(name =>
-              workflowStatus[name]?.status === 'completed' &&
-              workflowStatus[name]?.conclusion === 'success'
+            // Verify all required checks are present and successful
+            const allPresent = requiredChecks.every(name => name in checkStatus);
+            const allSuccessful = requiredChecks.every(name =>
+              checkStatus[name]?.status === 'completed' &&
+              checkStatus[name]?.conclusion === 'success'
             );
 
-            console.log(`All workflows present: ${allPresent}`);
-            console.log(`All workflows successful: ${allSuccessful}`);
+            console.log(`All required checks present: ${allPresent}`);
+            console.log(`All required checks successful: ${allSuccessful}`);
             console.log(`PR mergeable: ${pr.mergeable}`);
 
             const readyToMerge = allPresent && allSuccessful && pr.mergeable && !pr.draft;
