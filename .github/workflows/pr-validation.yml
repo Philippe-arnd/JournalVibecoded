@@ -135,7 +135,7 @@ jobs:
 
       - name: 💬 Comment on PR (Success)
         if: success()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const comment = `## ✅ All Validation Checks Passed!
@@ -162,7 +162,7 @@ jobs:
 
       - name: 💬 Comment on PR (Failure)
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const comment = `## ❌ Validation Checks Failed
