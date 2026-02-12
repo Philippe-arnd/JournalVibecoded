@@ -1,0 +1,62 @@
+# Gitleaks Configuration
+# https://github.com/gitleaks/gitleaks#configuration
+
+title = "Gitleaks Config for Journal App"
+
+[extend]
+# Use default gitleaks config as base
+useDefault = true
+
+[allowlist]
+description = "Allowlist for false positives"
+
+# Allow example/documentation files with fake credentials
+paths = [
+  '''.*IMPLEMENTATION\.md$''',
+  '''.*README\.md$''',
+  '''.*CLAUDE\.md$''',
+  '''.env.example$''',
+  '''_bmad-output/.*''',
+  '''docs/.*''',
+]
+
+# Allow test files
+regexes = [
+  # Test credentials in workflow files
+  '''test-secret-key''',
+  '''test_password''',
+  '''test-password''',
+  '''test_key''',
+  '''re_test_key''',
+
+  # Example/placeholder patterns
+  '''your_.*_here''',
+  '''your-.*-here''',
+  '''sk_test_.*example''',
+  '''example.*key''',
+  '''placeholder''',
+  '''REPLACE_ME''',
+  '''TODO:.*''',
+]
+
+# Allow specific test files and directories
+[[allowlist.paths]]
+regex = '''server/src/__tests__/.*'''
+
+[[allowlist.paths]]
+regex = '''.*\.test\.(js|ts|jsx|tsx)$'''
+
+[[allowlist.paths]]
+regex = '''.*\.spec\.(js|ts|jsx|tsx)$'''
+
+[[allowlist.paths]]
+regex = '''server/drizzle/.*'''
+
+[[allowlist.paths]]
+regex = '''node_modules/.*'''
+
+[[allowlist.paths]]
+regex = '''dist/.*'''
+
+[[allowlist.paths]]
+regex = '''build/.*'''
