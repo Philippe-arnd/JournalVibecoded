@@ -21,7 +21,7 @@ rules:
       - typescript
     paths:
       include:
-        - client/src/utils/encryption.js
+        - "**/client/src/utils/encryption.js"
 
   # 2. RLS Bypass Risk - Direct Database Query Without User Context
   - id: rls-bypass-risk
@@ -41,8 +41,8 @@ rules:
       - typescript
     paths:
       include:
-        - server/src/routes/**
-        - server/src/server.ts
+        - "**/server/src/routes/**"
+        - "**/server/src/server.ts"
 
   # 3. Missing Authentication Middleware
   - id: missing-auth-middleware
@@ -70,8 +70,8 @@ rules:
       - typescript
     paths:
       include:
-        - server/src/server.ts
-        - server/src/routes/**
+        - "**/server/src/server.ts"
+        - "**/server/src/routes/**"
 
   # 4. Hardcoded Secret Pattern
   - id: hardcoded-secret
@@ -113,7 +113,7 @@ rules:
       - typescript
     paths:
       include:
-        - server/**
+        - "**/server/**"
 
   # 6. SQL Injection Risk - String Concatenation in Queries
   - id: sql-injection-risk
@@ -132,15 +132,18 @@ rules:
       - typescript
     paths:
       include:
-        - server/**
+        - "**/server/**"
 
   # 7. XSS Risk - Unsafe HTML Rendering
   - id: xss-risk-dangerous-html
     patterns:
       - pattern-either:
-          - pattern: "dangerouslySetInnerHTML={{ __html: $VAR }}"
-          - pattern: "innerHTML = $VAR"
-      - pattern-not: "dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize($VAR) }}"
+          - pattern: |
+              {__html: $VAR}
+          - pattern: |
+              $EL.innerHTML = $VAR
+      - pattern-not: |
+          {__html: DOMPurify.sanitize(...)}
     message: |
       Potential XSS vulnerability. Avoid dangerouslySetInnerHTML unless absolutely necessary.
       If required, sanitize HTML with DOMPurify before rendering.
@@ -148,11 +151,9 @@ rules:
     languages:
       - javascript
       - typescript
-      - jsx
-      - tsx
     paths:
       include:
-        - client/**
+        - "**/client/**"
 
   # 8. Missing Input Validation on API Routes
   - id: missing-input-validation
@@ -178,8 +179,8 @@ rules:
       - typescript
     paths:
       include:
-        - server/src/server.ts
-        - server/src/routes/**
+        - "**/server/src/server.ts"
+        - "**/server/src/routes/**"
 
   # 9. Insecure Random Generation
   - id: insecure-random
@@ -221,4 +222,4 @@ rules:
       - typescript
     paths:
       include:
-        - client/**
+        - "**/client/**"
