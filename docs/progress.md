@@ -2,6 +2,78 @@
 
 ---
 
+## 2026-02-14 — PostgreSQL 17 → 18 Upgrade: Data Loss Incident
+
+**Branch**: `fix/upgrade-postgres-18`
+**Commit**: `chore(db): upgrade PostgreSQL 17 → 18-alpine`
+
+### What Happened
+
+Upgraded `docker-compose.yml` to use `postgres:18-alpine`. The correct pre-upgrade procedure is:
+
+1. Dump the database to the **host** filesystem
+2. Stop the stack and remove the `postgres_data` volume
+3. Deploy PG18
+4. Restore the dump
+
+**What actually happened**: The dump was run *inside* the PG17 container:
+
+```bash
+# WRONG — saves to container's ephemeral /tmp
+pg_dumpall -U postgres > /tmp/journal_pg17_backup.sql
+```
+
+The file was written to the container's writable layer (`/tmp`), not to the host or a mounted volume. When the `postgres_data` volume was dropped and the stack redeployed, the container was recreated and the dump was gone.
+
+`docker ps -a` confirmed the old PG17 container was fully removed — **data is unrecoverable**.
+
+### Root Cause
+
+Container `/tmp` is ephemeral. It lives in the container's writable layer and is destroyed when the container is removed. A dump saved there survives `docker stop` but not `docker rm` or a full stack redeploy.
+
+### Recovery
+
+Schema was re-initialized from scratch on PG18:
+
+```bash
+docker exec -it <pg18-container> psql -U postgres -c "CREATE DATABASE journal;"
+npm run --prefix server db:migrate
+npm run --prefix server db:rls
+npm run --prefix server seed:user   # recreate test user
+```
+
+User data (journal entries) is unrecoverable. Schema and RLS policies are intact.
+
+### Correct Procedure for Future PG Major Upgrades
+
+```bash
+# 1. Dump to HOST filesystem (not inside the container)
+docker exec <pg-container> pg_dump -U postgres journal > ~/journal_backup_$(date +%Y%m%d).sql
+
+# 2. Verify the file exists and is non-empty on the host
+ls -lh ~/journal_backup_*.sql
+
+# 3. Stop stack and remove data volume
+docker-compose down -v
+
+# 4. Deploy new PG version
+docker-compose up -d --build db
+
+# 5. Wait for PG to be ready, then restore
+docker exec -i <pg18-container> psql -U postgres journal < ~/journal_backup_*.sql
+
+# 6. Bring up the rest of the stack
+docker-compose up -d
+```
+
+### Key Lessons
+
+- **Never dump to `/tmp` inside a container** — always redirect to the host (`docker exec <c> pg_dump ... > /host/path.sql`)
+- **Verify the dump file exists on the host before removing any volumes**
+- A named volume (`postgres_data`) persists across `docker-compose down` but is deleted by `docker-compose down -v` or explicit `docker volume rm`
+
+---
+
 ## 2026-02-14 — Fix Docker Build Broken by PR #52
 
 **Branch**: `fix/automerge-workflow`
