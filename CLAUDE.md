@@ -386,6 +386,29 @@ Before proposing changes or merging code:
 6. Maintain `app.set('trust proxy', true)` and Service Worker API bypass in any infrastructure changes
 7. Check bundle size impact if adding new client dependencies: `cd client && npm run build`
 
+## Database Backup Safety
+
+**CRITICAL: Always dump to the HOST filesystem, never inside the container.**
+
+```bash
+# CORRECT — dump redirected to host
+docker exec <pg-container> pg_dump -U postgres journal > ~/journal_backup_$(date +%Y%m%d).sql
+
+# WRONG — /tmp is ephemeral; file is lost when the container is removed
+docker exec -it <pg-container> bash -c "pg_dump -U postgres journal > /tmp/backup.sql"
+```
+
+**Procedure for PostgreSQL major version upgrades:**
+
+1. Dump to host: `docker exec <pg-container> pg_dump -U postgres journal > ~/journal_backup.sql`
+2. Verify file exists and is non-empty on the **host**: `ls -lh ~/journal_backup.sql`
+3. Stop stack and remove volume: `docker-compose down -v`
+4. Deploy new PG version: `docker-compose up -d --build db`
+5. Restore: `docker exec -i <new-pg-container> psql -U postgres journal < ~/journal_backup.sql`
+6. Bring up remaining services: `docker-compose up -d`
+
+**Why container `/tmp` is dangerous**: It lives in the container's writable layer and is destroyed when the container is removed. It survives `docker stop` but not `docker rm` or a stack redeploy.
+
 ## Important Notes
 
 - **One entry per day**: Database constraint prevents duplicate entries for same user/date
