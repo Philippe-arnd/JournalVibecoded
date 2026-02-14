@@ -1,4 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('../utils/send-email', () => ({
+    sendEmail: vi.fn().mockResolvedValue({ id: 'test-id' })
+}));
+
 import request from 'supertest';
 import app from '../server';
 
