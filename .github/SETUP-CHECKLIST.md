@@ -330,7 +330,8 @@ graph LR
 
 ## 📚 Documentation
 
-- **Detailed workflow guide**: See `WORKFLOW-OPTIMIZATION.md`
+- **Detailed workflow guide**: See `WORKFLOWS.md`
+- **Setup and configuration**: See `CICD-SETUP.md`
 - **Security configuration**: See `.gitleaks.toml` and `.semgrep.yml`
 - **Renovate config**: See `renovate.json`
 - **Developer guide**: See `CLAUDE.md`
@@ -372,7 +373,7 @@ If something doesn't work:
 ## 📞 Getting Help
 
 - Review workflow logs in **Actions** tab
-- Check `WORKFLOW-OPTIMIZATION.md` for technical details
+- Check `WORKFLOWS.md` for technical details
 - Review `CLAUDE.md` for development guidelines
 - Check GitHub Actions documentation: https://docs.github.com/en/actions
 

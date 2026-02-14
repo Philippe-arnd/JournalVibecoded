@@ -46,7 +46,7 @@ The Journal app uses a **fully automated CI/CD pipeline** that:
 
 ### 2. 🐳 Docker Build Validation (`docker-validation.yml`)
 
-**Triggers**: When PR is opened/updated targeting `main`
+**Triggers**: When PR is opened/updated targeting `main` **and** the changes touch Docker-related files (`Dockerfile`, `*/Dockerfile`, `*.Dockerfile`, `docker-compose*.yml`, `.dockerignore`). Does **not** run on code-only PRs.
 
 **Checks**:
 - ✅ Server Docker image builds
@@ -73,35 +73,38 @@ The Journal app uses a **fully automated CI/CD pipeline** that:
 
 ---
 
-### 4. 📊 Code Coverage (`code-coverage.yml`)
+### 4. 🔒🚀 Security & Performance (`security-performance.yml`)
 
-**Triggers**: When PR is opened/updated targeting `main`, or push to `main`
+**Triggers**: When PR is opened/updated targeting `main` (skips drafts)
 
-**Checks**:
-- ✅ Runs server tests with coverage
-- ✅ Generates coverage report
-- ✅ Comments coverage metrics on PR
+**Jobs** (three run in parallel):
 
-**Thresholds**:
-- ✅ 80%+ = Excellent
-- ⚠️ 60-79% = Warning
-- ❌ <60% = Needs improvement
+- 🔍 **Secret Detection** (timeout: 2m) — Gitleaks scans full git history for exposed credentials. Blocks PR on failure. Config: `.gitleaks.toml`
+- 🛡️ **Security Scan** (timeout: 3m) — Semgrep SAST with `p/security-audit`, `p/javascript`, `p/typescript`, `p/react`, `p/nodejs`, and `.semgrep.yml` custom rules. Critical errors block; warnings are non-blocking.
+- 📦 **Bundle Size** (timeout: 5m) — Builds client, compares JS/CSS sizes against baselines (JS: 543 KB, CSS: 43 KB). Warns if either grows >10% (non-blocking).
+- 📋 **Generate Report** — Posts/updates a single consolidated PR comment. Fails the check if secret or SAST jobs failed.
+
+**Coverage** is now part of `pr-validation.yml` (`Database & API Tests` job), not a separate workflow.
 
 ---
 
 ### 5. 🤖 Auto-Merge (`auto-merge.yml`)
 
-**Triggers**:
-- When PR review is submitted
-- When check suite completes
-- When PR becomes ready for review
+**Triggers**: `workflow_run` completion for any of:
+- `✅ PR Validation`
+- `🔒🚀 Security & Performance`
+- `🔒 Dependency Review`
+- `🐳 Docker Validation`
+
+Only runs when the triggering workflow **succeeded**.
 
 **Process**:
-1. Checks that all validation workflows passed
-2. Verifies PR is mergeable (no conflicts)
-3. Automatically merges PR with squash strategy
-4. Comments on PR with merge confirmation
-5. Coolify webhook triggers production deployment
+1. Finds the open PR associated with the workflow's head branch
+2. Skips draft PRs and PRs not targeting `main`
+3. Queries all check runs and verifies all required checks are `completed` + `success`
+4. Verifies PR is mergeable (no conflicts)
+5. Squash-merges and posts a confirmation comment
+6. Coolify webhook triggers production deployment
 
 **Merge Strategy**: Squash merge (clean commit history)
 
@@ -114,15 +117,22 @@ The Journal app uses a **fully automated CI/CD pipeline** that:
 ```
 Developer/Renovate creates PR targeting main
            ↓
-All validation workflows run in parallel:
-  - PR Validation ✅
-  - Docker Validation ✅
+Validation workflows run in parallel:
+  - PR Validation (Quick Checks + DB & API Tests) ✅
+  - Security & Performance (Secret Detection + SAST + Bundle Size) ✅
   - Dependency Review ✅
-  - Code Coverage ✅
+  - Docker Validation (only if Docker files changed) ✅
            ↓
-All checks pass ✅
+Each workflow completes → triggers auto-merge workflow via workflow_run
            ↓
-Auto-merge workflow triggers
+Auto-merge checks: are ALL 5 required checks completed + successful?
+  - Quick Checks ✅
+  - Database & API Tests ✅
+  - 🔍 Secret Detection ✅
+  - 🛡️ Security Scan ✅
+  - Review Dependencies for Vulnerabilities ✅
+           ↓
+Is PR mergeable (no conflicts, not draft)?
            ↓
 PR is squash-merged to main 🎉
            ↓
@@ -135,11 +145,16 @@ Coolify deploys to production 🚀
 
 For a PR to auto-merge, **ALL** of the following must be true:
 
-1. ✅ All status checks passed
-2. ✅ No merge conflicts
-3. ✅ PR is not in draft mode
-4. ✅ PR targets `main` branch
-5. ✅ No security vulnerabilities detected
+1. ✅ PR targets `main` branch
+2. ✅ PR is not in draft mode
+3. ✅ No merge conflicts (PR is mergeable)
+4. ✅ `Quick Checks` passed (lint, infra, builds)
+5. ✅ `Database & API Tests` passed (migrations, RLS, Vitest + coverage)
+6. ✅ `🔍 Secret Detection` passed (no exposed credentials)
+7. ✅ `🛡️ Security Scan` passed (no critical vulnerabilities)
+8. ✅ `Review Dependencies for Vulnerabilities` passed (no high/critical CVEs)
+
+**Note**: Docker Validation and Bundle Size are **not** required for auto-merge. Docker only runs on Docker file changes; Bundle Size is informational only.
 
 ---
 
@@ -211,9 +226,14 @@ Go to: **Settings → Branches → Branch protection rules → `main`**
 2. ✅ **Require status checks to pass before merging**
    - Require branches to be up to date before merging
    - Required status checks:
-     - `Run All Validations` (pr-validation.yml)
-     - `Validate Docker Images` (docker-validation.yml)
+     - `Quick Checks` (pr-validation.yml)
+     - `Database & API Tests` (pr-validation.yml)
+     - `🔍 Secret Detection` (security-performance.yml)
+     - `🛡️ Security Scan` (security-performance.yml)
      - `Review Dependencies for Vulnerabilities` (dependency-review.yml)
+   - Optional (non-blocking):
+     - `📦 Bundle Size` (security-performance.yml)
+     - `Build & Test Docker Images` (docker-validation.yml — path-triggered)
 
 3. ✅ **Require conversation resolution before merging**
 
@@ -291,11 +311,13 @@ Configuration is read from `renovate.json` automatically.
 
 ### Expected Behavior
 
-- ✅ 4 workflow runs appear (PR validation, Docker, Dependency Review, Coverage)
-- ✅ Comments posted on PR with status
-- ✅ All checks turn green
-- ✅ Auto-merge workflow runs
-- ✅ PR merges automatically
+- ✅ 3 workflow runs appear (PR Validation, Security & Performance, Dependency Review)
+- ✅ Docker Validation does **not** run (no Docker files changed)
+- ✅ PR Validation posts a unified comment with lint/build/test/coverage results
+- ✅ Security & Performance posts a unified comment with secret/SAST/bundle results
+- ✅ All 5 required checks turn green
+- ✅ Auto-merge workflow triggers via `workflow_run` on each completion
+- ✅ PR squash-merges automatically once all checks pass
 - ✅ Coolify deploys to production
 
 ---
@@ -360,4 +382,4 @@ For issues with:
 ---
 
 **Status**: ✅ Fully Automated
-**Last Updated**: 2026-02-11
+**Last Updated**: 2026-02-14
