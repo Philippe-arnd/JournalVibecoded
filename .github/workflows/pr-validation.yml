@@ -9,167 +9,34 @@ concurrency:
   group: validation-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
-  # Fast checks (no database needed) - run in parallel
-  quick-checks:
-    name: Quick Checks
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+  validation:
     if: github.event.pull_request.draft == false
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24.13.1'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: |
-          npm ci --prefer-offline
-          npm ci --prefix client --prefer-offline
-          npm ci --prefix server --prefer-offline
-
-      - name: Lint & Infrastructure validation (parallel)
-        run: |
-          npm run lint:client &
-          npm run test:infra &
-          wait
-
-      - name: Build (parallel)
-        run: |
-          npm run build --prefix client &
-          npm run build --prefix server &
-          wait
-
-  # Database tests - run in parallel with quick-checks
-  database-tests:
-    name: Database & API Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    if: github.event.pull_request.draft == false
-
-    permissions:
-      contents: read
-      pull-requests: write
-
-    services:
-      postgres:
-        image: postgres:18-alpine@sha256:88f300be8635fe8a9ed4c18a68ba497fb6df1215fd2b074895afd027bd3e1006
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: journal_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24.13.1'
-          cache: 'npm'
-
-      - name: Install server dependencies only
-        working-directory: server
-        run: npm ci --prefer-offline
-
-      - name: Setup database
-        env:
-          DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
-          BETTER_AUTH_SECRET: test-secret-key-for-ci-minimum-32-characters
-          BETTER_AUTH_URL: http://localhost:3000
-        working-directory: server
-        run: |
-          PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "CREATE USER app_user WITH PASSWORD 'app_password';"
-          PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "GRANT CONNECT ON DATABASE journal_test TO app_user;"
-          PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "GRANT USAGE ON SCHEMA public TO app_user;"
-          PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;"
-          PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;"
-          PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;"
-          PGPASSWORD=test_password psql -h localhost -U postgres -d journal_test -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;"
-          npm run db:push
-          npm run db:rls
-
-      - name: Run tests with coverage
-        env:
-          DATABASE_URL: postgresql://app_user:app_password@localhost:5432/journal_test
-          DATABASE_ADMIN_URL: postgresql://postgres:test_password@localhost:5432/journal_test
-          BETTER_AUTH_SECRET: test-secret-key-for-ci-minimum-32-characters
-          BETTER_AUTH_URL: http://localhost:3000
-          RESEND_API_KEY: re_test_key_for_ci
-          NODE_ENV: test
-        working-directory: server
-        run: |
-          npm run test:rls
-          npx vitest run --coverage --coverage.reporter=json-summary --coverage.reporter=text
-
-      - name: Comment with results
-        if: always()
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const fs = require('fs');
-            const path = require('path');
-
-            let comment = '## ✅ Validation Results\n\n';
-            comment += '| Check | Status |\n|:------|:-------|\n';
-
-            // Quick checks status
-            const quickStatus = '${{ needs.quick-checks.result }}' || '${{ job.status }}';
-            comment += `| 🔍 **Linting & Infra** | ${quickStatus === 'success' ? '✅' : '❌'} |\n`;
-            comment += `| 🏗️ **Builds** | ${quickStatus === 'success' ? '✅' : '❌'} |\n`;
-
-            // Database tests status
-            const dbStatus = '${{ job.status }}';
-            comment += `| 🧪 **Server Tests & RLS** | ${dbStatus === 'success' ? '✅' : '❌'} |\n`;
-
-            // Coverage
-            try {
-              const coveragePath = path.join(process.cwd(), 'server', 'coverage', 'coverage-summary.json');
-              const coverage = JSON.parse(fs.readFileSync(coveragePath, 'utf8'));
-              const pct = coverage.total.lines.pct;
-              const emoji = pct >= 80 ? '✅' : pct >= 60 ? '⚠️' : '❌';
-              comment += `| 📊 **Code Coverage** | ${emoji} ${pct}% |\n`;
-            } catch (e) {
-              comment += '| 📊 **Code Coverage** | ⚠️ N/A |\n';
-            }
-
-            comment += '\n---\n*Validated in [run #${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*';
-
-            const { data: comments } = await github.rest.issues.listComments({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
-
-            const botComment = comments.find(c =>
-              c.user.type === 'Bot' && c.body.includes('Validation Results')
-            );
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                comment_id: botComment.id,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
-            } else {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
-            }
+    uses: Philippe-arnd/reusable-workflow-vibecoded/.github/workflows/reusable-pr-validation.yml@main
+    with:
+      node-version: '24.13.1'
+      install-command: >-
+        npm ci --prefer-offline &&
+        npm ci --prefix client --prefer-offline &&
+        npm ci --prefix server --prefer-offline
+      cache-dependency-path: package-lock.json
+      lint-command: npm run lint:client && npm run test:infra
+      build-command: npm run build --prefix client && npm run build --prefix server
+      test-command: cd server && npx vitest run --coverage --coverage.reporter=json-summary --coverage.reporter=text
+      coverage-dir: server/coverage
+      test-env: |
+        BETTER_AUTH_SECRET=test-secret-key-for-ci-minimum-32-characters
+        BETTER_AUTH_URL=http://localhost:3000
+        RESEND_API_KEY=re_test_key_for_ci
+        NODE_ENV=test
+      postgres-db: journal_test
+      postgres-admin-password: test_password
+      app-user: app_user
+      app-password: app_password
+      db-migration-command: npm run --prefix server db:push
+      db-rls-setup-command: npm run --prefix server db:rls
+      rls-test-command: npm run --prefix server test:rls
