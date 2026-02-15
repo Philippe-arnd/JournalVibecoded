@@ -9,8 +9,6 @@ on:
       - "🐳 Docker Validation"
     types:
       - completed
-    branches:
-      - main
 
 permissions:
   contents: write
