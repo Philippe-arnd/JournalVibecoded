@@ -19,156 +19,18 @@ permissions:
 
 jobs:
   auto-merge:
-    name: Auto-Merge if All Checks Pass
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    # Only run if the triggering workflow succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-
-    steps:
-      - name: 📥 Checkout repository
-        uses: actions/checkout@v6
-
-      - name: 🔍 Find Associated PR
-        id: find-pr
-        uses: actions/github-script@v8
-        with:
-          script: |
-            // Get the PR associated with this workflow run
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              head: `${context.repo.owner}:${github.event.workflow_run.head_branch}`,
-            });
-
-            if (prs.length === 0) {
-              console.log('No open PR found for this branch');
-              return null;
-            }
-
-            const pr = prs[0];
-            console.log(`Found PR #${pr.number}: ${pr.title}`);
-
-            // Only process PRs targeting main
-            if (pr.base.ref !== 'main') {
-              console.log(`PR targets ${pr.base.ref}, not main. Skipping.`);
-              return null;
-            }
-
-            core.setOutput('pr_number', pr.number);
-            core.setOutput('pr_title', pr.title);
-            return pr.number;
-
-      - name: 🔍 Check All Required Checks
-        id: check-status
-        if: steps.find-pr.outputs.pr_number
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const prNumber = ${{ steps.find-pr.outputs.pr_number }};
-
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber,
-            });
-
-            console.log(`Checking PR #${prNumber}: ${pr.title}`);
-            console.log(`Draft: ${pr.draft}`);
-            console.log(`Mergeable: ${pr.mergeable}`);
-
-            // Skip draft PRs
-            if (pr.draft) {
-              console.log('PR is draft, skipping auto-merge');
-              core.setOutput('ready_to_merge', 'false');
-              return;
-            }
-
-            // Get all status checks for the PR
-            const { data: checks } = await github.rest.checks.listForRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: pr.head.sha,
-            });
-
-            console.log(`Found ${checks.check_runs.length} check runs`);
-
-            // Required checks from GitHub Ruleset
-            const requiredChecks = [
-              'Quick Checks',
-              'Database & API Tests',
-              '🔍 Secret Detection',
-              '🛡️ Security Scan',
-              'Review Dependencies for Vulnerabilities'
-            ];
-
-            // Check if all required checks have passed
-            const checkStatus = {};
-            for (const check of checks.check_runs) {
-              if (requiredChecks.includes(check.name)) {
-                checkStatus[check.name] = {
-                  status: check.status,
-                  conclusion: check.conclusion
-                };
-                console.log(`${check.name}: ${check.status} - ${check.conclusion}`);
-              }
-            }
-
-            // Verify all required checks are present and successful
-            const allPresent = requiredChecks.every(name => name in checkStatus);
-            const allSuccessful = requiredChecks.every(name =>
-              checkStatus[name]?.status === 'completed' &&
-              checkStatus[name]?.conclusion === 'success'
-            );
-
-            console.log(`All required checks present: ${allPresent}`);
-            console.log(`All required checks successful: ${allSuccessful}`);
-            console.log(`PR mergeable: ${pr.mergeable}`);
-
-            const readyToMerge = allPresent && allSuccessful && pr.mergeable && !pr.draft;
-            core.setOutput('ready_to_merge', readyToMerge.toString());
-            core.setOutput('pr_number', prNumber);
-
-      - name: 🚀 Auto-Merge PR
-        if: steps.check-status.outputs.ready_to_merge == 'true'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const prNumber = ${{ steps.check-status.outputs.pr_number }};
-
-            try {
-              console.log(`Attempting to merge PR #${prNumber}...`);
-
-              // Merge the PR with squash strategy
-              const result = await github.rest.pulls.merge({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: prNumber,
-                merge_method: 'squash',
-              });
-
-              console.log(`✅ PR #${prNumber} has been auto-merged!`);
-              console.log(`Merge SHA: ${result.data.sha}`);
-
-              // Comment on the PR
-              await github.rest.issues.createComment({
-                issue_number: prNumber,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `🤖 **Auto-merged!**\n\nAll validation checks passed successfully. This PR has been automatically merged to \`main\`.\n\n✅ Deployment to production will begin shortly via Coolify.`
-              });
-            } catch (error) {
-              console.error(`⚠️ Failed to auto-merge: ${error.message}`);
-
-              // Comment on the PR about the failure
-              await github.rest.issues.createComment({
-                issue_number: prNumber,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `⚠️ **Auto-merge attempted but failed**\n\nReason: ${error.message}\n\nPlease merge manually or check for conflicts.`
-              });
-
-              throw error;
-            }
+    uses: Philippe-arnd/reusable-workflow-vibecoded/.github/workflows/reusable-auto-merge.yml@main
+    with:
+      required-checks: |
+        ✅ Quick Checks
+        🧪 Vitest Tests
+        🔒 RLS Tests
+        🔑 Secret Detection
+        🛡️ Security Scan
+        🔎 Review Dependencies for Vulnerabilities
+      conditional-checks: |
+        📦 Bundle Size
+        Build & Test Docker Images
+      merge-method: squash
+      base-branch: main
+      block-label: major-update
