@@ -1,4 +1,5 @@
 # <img src="client/public/favicon.svg" width="40" height="40" alt="Journal Logo" style="vertical-align: bottom;" /> Journal App (Vibe Coding Project)
+<!-- workflow smoke test -->
 
 [![PR Validation](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/pr-validation.yml/badge.svg)](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/pr-validation.yml)
 [![Docker Validation](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/docker-validation.yml/badge.svg)](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/docker-validation.yml)
