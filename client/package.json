@@ -16,7 +16,7 @@
     "dompurify": "^3.3.3",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
-    "framer-motion": "^12.36.0",
+    "framer-motion": "^12.37.0",
     "lucide-react": "^0.577.0",
     "pg": "^8.20.0",
     "react": "^19.2.4",
