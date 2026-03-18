@@ -224,6 +224,28 @@ npm run --prefix server test:rls  # Test Row-Level Security policies
 
 All tests must pass before merging to main.
 
+### Release Process
+
+Releases are created manually via the **Release workflow** (`.github/workflows/release.yml`).
+
+**Tag format**: `release-YYYY-MM-DD-X` (e.g. `release-2026-03-18-1`, `release-2026-03-18-2`)
+
+**To create a release**:
+1. Go to **Actions → 🚀 Release → Run workflow** on GitHub
+2. Optionally add release notes in the input field
+3. The workflow automatically:
+   - Determines the next sequential tag for today
+   - Generates a changelog from commits since the last release
+   - Creates the git tag and GitHub release
+
+**Local equivalent**:
+```bash
+# List existing release tags
+git tag -l "release-*" | sort -V
+
+# The workflow handles tag creation — do not create release tags manually
+```
+
 ### Security & Performance Testing
 
 **Automated Security & Performance Workflow** (`.github/workflows/security-performance.yml`):
