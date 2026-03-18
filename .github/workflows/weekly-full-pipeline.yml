@@ -1,0 +1,85 @@
+name: 📅 Weekly Full Pipeline
+
+on:
+  schedule:
+    - cron: '0 3 * * 0' # Every Sunday at 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  pr-validation:
+    name: ✅ PR Validation
+    uses: Philippe-arnd/reusable-workflow-vibecoded/.github/workflows/reusable-pr-validation.yml@main
+    with:
+      node-version: '24.13.1'
+      install-command: >-
+        npm ci --prefer-offline &&
+        npm ci --prefix client --prefer-offline &&
+        npm ci --prefix server --prefer-offline
+      cache-dependency-path: package-lock.json
+      lint-command: npm run lint:client && npm run test:infra
+      build-command: npm run build --prefix client && npm run build --prefix server
+      test-command: cd server && npx vitest run --coverage --coverage.reporter=json-summary --coverage.reporter=text
+      coverage-dir: server/coverage
+      test-env: |
+        BETTER_AUTH_SECRET=test-secret-key-for-ci-minimum-32-characters
+        BETTER_AUTH_URL=http://localhost:3000
+        RESEND_API_KEY=re_test_key_for_ci
+        NODE_ENV=test
+      postgres-db: journal_test
+      postgres-admin-password: test_password
+      app-user: app_user
+      app-password: app_password
+      db-migration-command: npm run --prefix server db:push
+      db-rls-setup-command: npm run --prefix server db:rls
+      rls-test-command: npm run --prefix server test:rls
+    permissions:
+      contents: read
+      pull-requests: write
+
+  security-performance:
+    name: 🔒🚀 Security & Performance
+    uses: Philippe-arnd/reusable-workflow-vibecoded/.github/workflows/reusable-security-performance.yml@main
+    with:
+      node-version: '24.13.1'
+      cache-dependency-path: client/package-lock.json
+      semgrep-extra-config: .semgrep.yml
+      run-bundle-analysis: true
+      install-command: npm ci --prefix client --prefer-offline --no-audit
+      build-command: npm run build --prefix client
+      bundle-client-dir: client
+      bundle-js-baseline-kb: 543
+      bundle-css-baseline-kb: 43
+      bundle-warn-threshold-pct: 10
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
+
+  docker-validation:
+    name: 🐳 Docker Validation
+    uses: Philippe-arnd/reusable-workflow-vibecoded/.github/workflows/reusable-docker-validation.yml@main
+    with:
+      use-compose: true
+      compose-env-content: |
+        DATABASE_URL=postgresql://app_user:app_password@db:5432/journal
+        DATABASE_ADMIN_URL=postgresql://postgres:password@db:5432/journal
+        BETTER_AUTH_SECRET=test-secret-key-docker-ci-minimum-32-characters
+        BETTER_AUTH_URL=http://localhost:3000
+        CLIENT_URL=http://localhost:5173
+        RESEND_API_KEY=re_test_key
+        EMAIL_FROM=noreply@example.com
+        TEST_USER_EMAIL=test@example.com
+        TEST_USER_PWD=test-password-for-ci
+        VITE_API_URL=http://localhost:3000/api
+        VITE_ENCRYPTION_KEY=test-secret-key-vite-encryption-32c
+      compose-services-to-build: 'server client'
+      compose-health-service: server
+      compose-health-port: 3000
+      health-endpoint: /health
+      run-trivy-scan: true
+      trivy-compose-image: journal-server
+      trivy-fail-on-finding: false
+    permissions:
+      contents: read
+      security-events: write
+      actions: write
