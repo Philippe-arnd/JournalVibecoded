@@ -18,90 +18,28 @@ concurrency:
 jobs:
   docker-build:
     name: Build & Test Docker Images
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
     if: github.event.pull_request.draft == false
-
     permissions:
       contents: read
-      pull-requests: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Create test .env
-        run: |
-          cat > .env << EOF
-          DATABASE_URL=postgresql://postgres:test_password@postgres:5432/journal_test
-          DATABASE_ADMIN_URL=postgresql://postgres:test_password@postgres:5432/journal_test
-          BETTER_AUTH_SECRET=test-secret-key-for-docker-ci-minimum-32-characters-long
-          BETTER_AUTH_URL=https://localhost:3000
-          ANTHROPIC_API_KEY=sk-test-key
-          RESEND_API_KEY=re_test_key
-          TEST_USER_EMAIL=test@example.com
-          TEST_USER_PASSWORD=TestPassword123!
-          EOF
-
-      - name: Build images (parallel)
-        run: |
-          docker compose build server &
-          docker compose build client &
-          wait
-
-      - name: Start services & test
-        run: |
-          docker compose up -d
-          sleep 10
-
-          # Wait for server health
-          for i in {1..30}; do
-            if docker compose exec -T server wget -q -O- http://localhost:3000/health 2>/dev/null; then
-              echo "✅ Server healthy"
-              docker compose down -v
-              exit 0
-            fi
-            sleep 2
-          done
-
-          echo "❌ Health check failed"
-          docker compose logs
-          docker compose down -v
-          exit 1
-
-      - name: Comment result
-        if: always()
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const status = '${{ job.status }}' === 'success' ? '✅ Passed' : '❌ Failed';
-            const comment = `## 🐳 Docker Validation: ${status}\n\n` +
-              `Docker images ${status === '✅ Passed' ? 'build successfully' : 'failed to build'}.` +
-              `\n\n*Run [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
-
-            const { data: comments } = await github.rest.issues.listComments({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
-
-            const botComment = comments.find(c => c.user.type === 'Bot' && c.body.includes('🐳 Docker Validation'));
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                comment_id: botComment.id,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
-            } else {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
-            }
+      security-events: write
+      actions: write
+    uses: Philippe-arnd/reusable-workflow-vibecoded/.github/workflows/reusable-docker-validation.yml@main
+    with:
+      use-compose: true
+      compose-env-content: |
+        DATABASE_URL=postgresql://app_user:app_password@db:5432/journal
+        DATABASE_ADMIN_URL=postgresql://postgres:password@db:5432/journal
+        BETTER_AUTH_SECRET=test-secret-key-docker-ci-minimum-32-characters
+        BETTER_AUTH_URL=http://localhost:3000
+        CLIENT_URL=http://localhost:5173
+        RESEND_API_KEY=re_test_key
+        EMAIL_FROM=noreply@example.com
+        TEST_USER_EMAIL=test@example.com
+        TEST_USER_PWD=test-password-for-ci
+        VITE_API_URL=http://localhost:3000/api
+        VITE_ENCRYPTION_KEY=test-secret-key-vite-encryption-32c
+      compose-services-to-build: 'server client'
+      compose-health-service: server
+      compose-health-port: 3000
+      health-endpoint: /health
+      run-trivy-scan: false

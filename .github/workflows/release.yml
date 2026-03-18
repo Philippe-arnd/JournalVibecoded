@@ -1,0 +1,91 @@
+name: 🚀 Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: 'Additional release notes (optional)'
+        required: false
+        type: string
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Determine next tag
+        id: tag
+        run: |
+          DATE=$(date +%Y.%m.%d)
+          # Check if a plain date tag already exists
+          if git tag -l "$DATE" | grep -q "^${DATE}$"; then
+            # Find the highest suffix for today
+            LATEST=$(git tag -l "${DATE}-*" | sort -V | tail -1)
+            if [ -z "$LATEST" ]; then
+              SEQ=2
+            else
+              SEQ=$(echo "$LATEST" | awk -F- '{print $NF}')
+              SEQ=$((SEQ + 1))
+            fi
+            TAG="${DATE}-${SEQ}"
+          else
+            TAG="$DATE"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Tag: $TAG"
+
+      - name: Generate changelog
+        run: |
+          # Find last release tag (YYYY.MM.DD or YYYY.MM.DD-X format)
+          LAST_TAG=$(git tag -l | grep -E '^[0-9]{4}\.[0-9]{2}\.[0-9]{2}(-[0-9]+)?$' | sort -V | tail -1)
+          if [ -z "$LAST_TAG" ]; then
+            git log --pretty=format:"- %s (%h)" HEAD > /tmp/changes.txt
+          else
+            git log "${LAST_TAG}..HEAD" --pretty=format:"- %s (%h)" > /tmp/changes.txt
+          fi
+          echo "Changelog:"
+          cat /tmp/changes.txt
+
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.tag.outputs.tag }}" -m "Release ${{ steps.tag.outputs.tag }}"
+          git push origin "${{ steps.tag.outputs.tag }}"
+
+      - name: Create GitHub release
+        uses: actions/github-script@v8
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          EXTRA_NOTES: ${{ inputs.notes }}
+        with:
+          script: |
+            const fs = require('fs');
+            const tag = process.env.TAG;
+            const extraNotes = process.env.EXTRA_NOTES || '';
+            const changes = fs.readFileSync('/tmp/changes.txt', 'utf8').trim();
+
+            let body = `## What's Changed\n\n${changes}`;
+            if (extraNotes) {
+              body += `\n\n### Notes\n${extraNotes}`;
+            }
+
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: tag,
+              body: body,
+              draft: false,
+              prerelease: false,
+            });
+
+            console.log(`Release ${tag} created successfully`);
