@@ -228,7 +228,7 @@ All tests must pass before merging to main.
 
 Releases are created manually via the **Release workflow** (`.github/workflows/release.yml`).
 
-**Tag format**: `release-YYYY-MM-DD-X` (e.g. `release-2026-03-18-1`, `release-2026-03-18-2`)
+**Tag format**: `YYYY.MM.DD` for the first release of the day, `YYYY.MM.DD-X` for subsequent ones (e.g. `2026.03.18`, `2026.03.18-2`)
 
 **To create a release**:
 1. Go to **Actions → 🚀 Release → Run workflow** on GitHub
