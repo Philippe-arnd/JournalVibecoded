@@ -20,9 +20,9 @@ jobs:
     with:
       node-version: '24.13.1'
       install-command: >-
-        npm ci --prefer-offline &&
-        npm ci --prefix client --prefer-offline &&
-        npm ci --prefix server --prefer-offline
+        npm ci &&
+        npm ci --prefix client &&
+        npm ci --prefix server
       cache-dependency-path: package-lock.json
       lint-command: npm run lint:client && npm run test:infra
       build-command: npm run build --prefix client && npm run build --prefix server
