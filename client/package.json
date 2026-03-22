@@ -11,7 +11,7 @@
     "seed:user": "tsx scripts/create-test-user.ts"
   },
   "dependencies": {
-    "better-auth": "^1.5.5",
+    "better-auth": "^1.5.6",
     "crypto-js": "^4.2.0",
     "dompurify": "^3.3.3",
     "dotenv": "^17.3.1",
