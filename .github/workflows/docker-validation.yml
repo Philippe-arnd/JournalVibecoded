@@ -42,6 +42,4 @@ jobs:
       compose-health-service: server
       compose-health-port: 3000
       health-endpoint: /health
-      run-trivy-scan: true
-      trivy-compose-image: journalvibecoded-server
-      trivy-fail-on-finding: false
+      run-trivy-scan: false

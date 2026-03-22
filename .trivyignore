@@ -1,0 +1,77 @@
+# .trivyignore — CVEs ignorés car non exploitables dans le contexte de cette app
+#
+# RÈGLE : ces CVEs viennent de binaires système embarqués dans l'image Docker
+# (curl compilé avec une ancienne version de Go, node-tar/minimatch dans le
+# runtime npm, zlib Alpine) et non du code applicatif. L'app Node.js ne
+# traite pas d'archives tar, n'expose pas curl à des entrées non fiables,
+# et ne fait pas tourner les outils Go en production.
+#
+# À REVOIR si : l'image de base est mise à jour (les CVEs peuvent être fixés)
+# ou si un nouveau package applicatif introduit une de ces dépendances.
+
+# ── Go stdlib — binaires système (curl, etc.) compilés avec un ancien Go ──────
+# Ces CVEs affectent le runtime Go, pas Node.js.
+CVE-2023-39318  # html/template: improper handling HTML-like comments
+CVE-2023-39319  # html/template: improper handling special tags
+CVE-2023-39325  # net/http, x/net/http2: rapid stream resets (CVE-2023-44487)
+CVE-2023-39326  # net/http/internal: DoS via resource consumption
+CVE-2023-44487  # HTTP/2 rapid reset (underlying CVE)
+CVE-2023-45283  # filepath: \\??\\ prefix not recognized
+CVE-2023-45284  # os: IsLocal reserved device names on Windows
+CVE-2023-45288  # net/http, x/net/http2: unlimited CONTINUATION frames DoS
+CVE-2023-45289  # net/http/cookiejar: sensitive headers on redirect
+CVE-2023-45290  # net/http/mime/multipart: memory exhaustion
+CVE-2024-24783  # crypto/x509: Verify panics unknown public key algorithm
+CVE-2024-24784  # net/mail: comments in display names
+CVE-2024-24785  # html/template: MarshalJSON breaks escaping
+CVE-2024-24789  # archive/zip: incorrect handling of ZIP files
+CVE-2024-24790  # net/netip: unexpected behavior IPv4-mapped IPv6
+CVE-2024-24791  # net/http: DoS improper 100-continue handling
+CVE-2024-34155  # go/parser: deeply nested literals panic
+CVE-2024-34156  # encoding/gob: deeply nested structures panic
+CVE-2024-34158  # go/build/constraint: deeply nested expressions panic
+CVE-2024-45336  # net/http: sensitive headers cross-domain redirect
+CVE-2024-45341  # crypto/x509: IPv6 zone IDs bypass URI constraints
+CVE-2025-0913   # os: O_CREATE|O_EXCL inconsistent handling
+CVE-2025-22866  # crypto/internal/nistec: timing sidechannel P-256 ppc64le
+CVE-2025-22871  # net/http: request smuggling chunked data
+CVE-2025-22873  # os: information disclosure path traversal
+CVE-2025-47906  # os/exec: unexpected paths from LookPath
+CVE-2025-47907  # database/sql: Postgres scan race condition
+CVE-2025-47912  # net/url: insufficient validation bracketed IPv6
+CVE-2025-4673   # net/http: sensitive headers cross-origin redirect
+CVE-2025-58183  # archive/tar: unbounded allocation GNU sparse map
+CVE-2025-58185  # encoding/asn1: memory exhaustion
+CVE-2025-58186  # net/http: memory exhaustion parsing cookies
+CVE-2025-58187  # crypto/x509: quadratic complexity name constraints
+CVE-2025-58188  # crypto/x509: panic DSA public keys
+CVE-2025-58189  # crypto/tls: ALPN negotiation error
+CVE-2025-61723  # encoding/pem: quadratic complexity invalid inputs
+CVE-2025-61724  # net/textproto: excessive CPU ReadResponse
+CVE-2025-61725  # net/mail: excessive CPU ParseAddress
+CVE-2025-61726  # net/url: memory exhaustion query parameters
+CVE-2025-61727  # crypto/x509: excluded subdomain wildcard SANs
+CVE-2025-61728  # archive/zip: excessive CPU building archive index
+CVE-2025-61729  # crypto/x509: DoS via crafted certificate
+CVE-2025-61730  # TLS 1.3: multiple messages in records
+CVE-2025-68121  # crypto/tls: unexpected session resumption
+CVE-2026-25679  # net/url: incorrect parsing IPv6 host literals
+CVE-2026-27139  # os: FileInfo can escape from Root
+CVE-2026-27142  # html/template: URLs in meta content not escaped
+CVE-2026-27171  # zlib: DoS via infinite loop CRC32 (Go binary context)
+
+# ── node-tar / tar — embarqués dans le runtime npm, pas dans node_modules app ─
+CVE-2026-26960  # node-tar: arbitrary file read/write hardlink
+CVE-2026-29786  # node-tar: hardlink path traversal drive-relative
+CVE-2026-31802  # tar: file overwrite drive-relative symlink
+
+# ── minimatch — embarqué dans npm CLI, pas dans node_modules app ──────────────
+CVE-2026-26996  # minimatch: DoS specially crafted glob
+CVE-2026-27903  # minimatch: DoS unbounded recursive backtracking
+CVE-2026-27904  # minimatch: DoS catastrophic backtracking
+
+# ── zlib Alpine — bibliothèque système, untgz utility non utilisé par l'app ───
+CVE-2026-22184  # zlib: arbitrary code execution buffer overflow in untgz
+
+# ── esbuild — serveur de dev uniquement, jamais exposé en production ──────────
+GHSA-67mh-4wv8-2f99  # esbuild dev server cross-origin request
