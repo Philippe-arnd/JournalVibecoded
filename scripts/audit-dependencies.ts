@@ -93,7 +93,7 @@ function getDependencies(location: 'client' | 'server' | 'root'): PackageInfo[] 
 // Get license info from npm
 async function getLicenseInfo(name: string): Promise<string | undefined> {
   try {
-    const info = execSync(`npm view ${name} license 2>/dev/null`, {
+    const info = execSync(`npm view ${name} license 2>/dev/null`, { // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- dev script only, name comes from npm list output not user input
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'ignore']
     });
