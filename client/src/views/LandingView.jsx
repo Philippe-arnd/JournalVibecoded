@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, Brain, Feather, Lock, Layout, Star, Github, Calendar, ChevronDown } from 'lucide-react';
+import { ArrowRight, Sparkles, Brain, Feather, Lock, Layout, Star, Code2, Calendar, ChevronDown } from 'lucide-react';
 import Logo from '../components/Logo';
 
 // Animation Variants
@@ -381,7 +381,7 @@ export default function LandingView() {
                 className="text-journal-800/60 hover:text-journal-900 transition-colors"
                 aria-label="GitHub Repository"
              >
-                <Github size={20} />
+                <Code2 size={20} />
              </a>
           </div>
 
