@@ -1,101 +1,25 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
-  "timezone": "America/New_York",
-  "schedule": [
-    "after 10pm every weekday",
-    "before 5am every weekday",
-    "every weekend"
-  ],
-  "labels": ["dependencies", "renovate"],
-  "prConcurrentLimit": 5,
-  "prCreation": "immediate",
-  "prHourlyLimit": 0,
-  "baseBranchPatterns": ["main"],
-  "separateMajorMinor": true,
-  "separateMinorPatch": false,
-  "rangeStrategy": "bump",
-  "semanticCommits": "enabled",
-  "commitMessagePrefix": "chore(deps):",
-  "commitMessageAction": "update",
-  "commitMessageExtra": "to {{newValue}}",
-  "automerge": true,
-  "automergeType": "pr",
-  "automergeStrategy": "squash",
-  "ignoreTests": false,
-  "platformAutomerge": true,
+  "timezone": "Europe/Paris",
+  "schedule": ["before 8am on monday"],
   "packageRules": [
     {
-      "description": "BLOCK: Major updates always require manual review",
-      "matchUpdateTypes": ["major"],
-      "automerge": false,
-      "labels": ["dependencies", "major-update"]
-    },
-    {
-      "description": "BLOCK: Docker image major version updates (data compatibility)",
-      "matchDatasources": ["docker"],
-      "matchUpdateTypes": ["major"],
-      "automerge": false,
-      "labels": ["dependencies", "major-update", "docker", "manual-review-required"]
-    },
-    {
-      "description": "Auto-merge: Minor and patch updates for all dependencies",
-      "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true,
-      "automergeType": "pr"
-    },
-    {
-      "description": "Auto-merge: GitHub Actions updates",
-      "matchManagers": ["github-actions"],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-non-major-dependencies",
+      "matchPackageNames": ["*"],
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true,
-      "automergeType": "pr"
+      "automergeType": "pr",
+      "platformAutomerge": true
     },
     {
-      "description": "Group: ESLint packages",
-      "groupName": "ESLint packages",
-      "automerge": true,
-      "matchPackageNames": ["/^eslint/", "/eslint-/"]
-    },
-    {
-      "description": "Group: TypeScript packages",
-      "groupName": "TypeScript packages",
-      "automerge": true,
-      "matchPackageNames": ["/^typescript/", "/^@types//"]
-    },
-    {
-      "description": "Group: React packages (manual review for major)",
-      "groupName": "React packages",
-      "automerge": true,
-      "matchPackageNames": ["/^react/", "/^@types/react/"],
-      "matchUpdateTypes": ["minor", "patch"]
-    },
-    {
-      "description": "Group: Vite packages (manual review for major)",
-      "groupName": "Vite packages",
-      "automerge": true,
-      "matchPackageNames": ["/^vite/", "/^@vitejs//"],
-      "matchUpdateTypes": ["minor", "patch"]
-    },
-    {
-      "description": "Pin Docker images with digests",
-      "matchDatasources": ["docker"],
-      "pinDigests": true,
-      "matchPackageNames": ["/postgres/", "/node/"]
+      "matchPackageNames": ["*"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "addLabels": ["major-update"]
     }
   ],
-  "vulnerabilityAlerts": {
-    "enabled": true,
-    "labels": ["security", "dependencies"],
-    "automerge": true,
-    "automergeType": "pr"
-  },
-  "lockFileMaintenance": {
-    "enabled": true,
-    "schedule": ["before 5am on monday"],
-    "automerge": true,
-    "automergeType": "pr"
-  },
   "dependencyDashboard": true,
   "dependencyDashboardTitle": "🤖 Renovate Dashboard",
   "dependencyDashboardHeader": "This dashboard shows all pending updates managed by Renovate Bot.",
