@@ -2,9 +2,9 @@
 <!-- workflow smoke test -->
 
 [![PR Validation](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/pr-validation.yml/badge.svg)](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/pr-validation.yml)
-[![Docker Validation](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/docker-validation.yml/badge.svg)](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/docker-validation.yml)
+[![Docker Validation](https://img.shields.io/github/actions/workflow/status/Philippe-arnd/JournalVibecoded/weekly-full-pipeline.yml?job=%F0%9F%90%B3+Docker+Validation&label=Docker+Validation)](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/weekly-full-pipeline.yml)
 [![Dependency Review](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/dependency-review.yml/badge.svg)](https://github.com/Philippe-arnd/JournalVibecoded/actions/workflows/dependency-review.yml)
-[![Latest Release](https://img.shields.io/github/v/tag/Philippe-arnd/JournalVibecoded?filter=release-*&label=release&color=blue)](https://github.com/Philippe-arnd/JournalVibecoded/releases)
+[![Latest Release](https://img.shields.io/github/v/tag/Philippe-arnd/JournalVibecoded?label=release&color=blue)](https://github.com/Philippe-arnd/JournalVibecoded/releases)
 
 A personal journaling application built using the B-MAD method, designed to make daily reflection an effortless habit through a guided 4-section flow and AI-powered coaching.
 
