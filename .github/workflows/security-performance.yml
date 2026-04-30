@@ -4,9 +4,11 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
 
 concurrency:
-  group: security-${{ github.event.pull_request.number }}
+  group: security-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 permissions:
@@ -16,13 +18,13 @@ permissions:
 
 jobs:
   security-performance:
-    if: github.event.pull_request.draft == false
+    if: github.event_name == 'push' || github.event.pull_request.draft == false
     uses: Philippe-arnd/reusable-workflow-vibecoded/.github/workflows/reusable-security-performance.yml@main
     with:
       node-version: '24.13.1'
       cache-dependency-path: client/package-lock.json
       semgrep-extra-config: .semgrep.yml
-      run-bundle-analysis: true
+      run-bundle-analysis: ${{ github.event_name == 'pull_request' }}
       install-command: npm ci --prefix client --prefer-offline --no-audit
       build-command: npm run build --prefix client
       bundle-client-dir: client
