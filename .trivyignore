@@ -59,6 +59,15 @@ CVE-2026-25679  # net/url: incorrect parsing IPv6 host literals
 CVE-2026-27139  # os: FileInfo can escape from Root
 CVE-2026-27142  # html/template: URLs in meta content not escaped
 CVE-2026-27171  # zlib: DoS via infinite loop CRC32 (Go binary context)
+CVE-2026-32280  # crypto/x509, crypto/tls: DoS via certificate chain building
+CVE-2026-32281  # crypto/x509: DoS via inefficient certificate chain validation
+CVE-2026-32282  # internal/syscall/unix: Root.Chmod can follow symlinks out of root
+CVE-2026-32283  # crypto/tls: multiple key update messages cause panic
+CVE-2026-32288  # archive/tar: DoS via maliciously-crafted archive
+CVE-2026-32289  # html/template: XSS via JS template literals context tracking
+
+# ── golang.org/x/net — dépendance transitive de esbuild, non exposée ─────────
+CVE-2025-22870  # golang.org/x/net/httpproxy: HTTP Proxy bypass via IPv6 Zone IDs
 
 # ── node-tar / tar — embarqués dans le runtime npm, pas dans node_modules app ─
 CVE-2026-26960  # node-tar: arbitrary file read/write hardlink
@@ -72,6 +81,11 @@ CVE-2026-27904  # minimatch: DoS catastrophic backtracking
 
 # ── zlib Alpine — bibliothèque système, untgz utility non utilisé par l'app ───
 CVE-2026-22184  # zlib: arbitrary code execution buffer overflow in untgz
+
+# ── picomatch / brace-expansion — embarqués dans npm CLI, pas dans node_modules app ─
+CVE-2026-33671  # picomatch: ReDoS via crafted extglob patterns in npm's tinyglobby
+CVE-2026-33672  # picomatch: method injection via POSIX bracket expressions in npm's tinyglobby
+CVE-2026-33750  # brace-expansion: DoS via zero step value in npm's dependencies
 
 # ── esbuild — serveur de dev uniquement, jamais exposé en production ──────────
 GHSA-67mh-4wv8-2f99  # esbuild dev server cross-origin request

@@ -109,7 +109,7 @@ function checkVulnerabilities(location: 'client' | 'server' | 'root'): Map<strin
 
   try {
     const dir = location === 'root' ? rootDir : path.join(rootDir, location);
-    const result = execSync('npm audit --json', {
+    const result = execSync('npm audit --json', { // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- dev script only, runs npm audit not user input
       cwd: dir,
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'ignore']
