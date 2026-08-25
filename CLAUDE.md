@@ -442,3 +442,4 @@ docker exec -it <pg-container> bash -c "pg_dump -U postgres journal > /tmp/backu
 - **Never modify docker-compose.yml port mappings**: Port mappings break Coolify routing. Use `docker-compose.override.yml` for local development only
 - **Origin consistency matters**: Use `http://localhost:5173` to avoid Better Auth cookie/origin issues
 - **Seeding is automatic**: The `seed:user` script runs on container start, recreating the test user for consistent credentials
+
