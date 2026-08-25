@@ -1,36 +1,45 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, X, Check, Loader2, Bold, List, Indent, Outdent } from 'lucide-react';
 import { entryService } from '../services/entryService';
+import VoiceInputButton from '../components/VoiceInputButton';
 
 const SECTIONS = [
   {
     id: 'professional',
     title: 'Professional Recap',
     prompt: 'What did you accomplish professionally?',
-    helper: 'Think about work wins, meetings, projects, or challenges'
+    helper: 'Think about work wins, meetings, projects, or challenges',
+    field: 'professional_recap',
+    audioField: 'professional_recap_audio'
   },
   {
     id: 'personal',
     title: 'Personal Recap',
     prompt: 'What did you do with your personal time?',
-    helper: 'Time with family/friends, hobbies, exercise, self-care'
+    helper: 'Time with family/friends, hobbies, exercise, self-care',
+    field: 'personal_recap',
+    audioField: 'personal_recap_audio'
   },
   {
     id: 'learning',
     title: 'Learning Reflections',
     prompt: 'What did you learn recently?',
-    helper: 'From podcasts, books, conversations, or experiences'
+    helper: 'From podcasts, books, conversations, or experiences',
+    field: 'learning_reflections',
+    audioField: 'learning_reflections_audio'
   },
   {
     id: 'gratitude',
     title: 'Gratitude',
     prompt: 'What are you grateful for today?',
-    helper: 'Big or small, personal or professional'
+    helper: 'Big or small, personal or professional',
+    field: 'gratitude',
+    audioField: 'gratitude_audio'
   }
 ];
 
-const RichTextEditor = ({ value, onChange, placeholder }) => {
+const RichTextEditor = forwardRef(({ value, onChange, placeholder, toolbarExtra }, ref) => {
   const editorRef = useRef(null);
 
   // Initial value only
@@ -52,10 +61,38 @@ const RichTextEditor = ({ value, onChange, placeholder }) => {
     editorRef.current?.focus();
   };
 
+  // Inserts transcribed text at the caret (or the end, if the editor isn't focused)
+  // so voice input can be appended without clobbering what's already typed.
+  useImperativeHandle(ref, () => ({
+    insertText(text) {
+      const el = editorRef.current;
+      if (!el) return;
+      el.focus();
+      const selection = window.getSelection();
+      let range;
+      if (selection && selection.rangeCount > 0 && el.contains(selection.anchorNode)) {
+        range = selection.getRangeAt(0);
+      } else {
+        range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+      }
+      range.deleteContents();
+      const needsLeadingSpace = !!el.textContent && !/\s$/.test(el.textContent);
+      const textNode = document.createTextNode(`${needsLeadingSpace ? ' ' : ''}${text}`);
+      range.insertNode(textNode);
+      range.setStartAfter(textNode);
+      range.collapse(true);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      handleInput();
+    }
+  }));
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex gap-1 mb-2 border-b border-journal-100 pb-2">
-        <button 
+      <div className="flex items-center gap-1 mb-2 border-b border-journal-100 pb-2">
+        <button
           onClick={() => exec('bold')}
           className="p-1.5 text-journal-400 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
           title="Bold"
@@ -63,44 +100,45 @@ const RichTextEditor = ({ value, onChange, placeholder }) => {
           <Bold size={18} />
         </button>
         <div className="w-px bg-journal-100 mx-1" />
-        <button 
+        <button
           onClick={() => exec('insertUnorderedList')}
           className="p-1.5 text-journal-400 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
           title="Bullet List"
         >
           <List size={18} />
         </button>
-        <button 
+        <button
           onClick={() => exec('outdent')}
           className="p-1.5 text-journal-400 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
           title="Outdent"
         >
           <Outdent size={18} />
         </button>
-        <button 
+        <button
           onClick={() => exec('indent')}
           className="p-1.5 text-journal-400 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
           title="Indent"
         >
           <Indent size={18} />
         </button>
+        {toolbarExtra && <div className="ml-auto flex items-center">{toolbarExtra}</div>}
       </div>
-      
+
       <div
         ref={editorRef}
         contentEditable
-        className="flex-1 overflow-y-auto outline-none text-lg text-journal-900 prose prose-journal 
-          [&_ul]:list-disc [&_ul]:pl-5 
-          [&_ol]:list-decimal [&_ol]:pl-5 
+        className="flex-1 overflow-y-auto outline-none text-lg text-journal-900 prose prose-journal
+          [&_ul]:list-disc [&_ul]:pl-5
+          [&_ol]:list-decimal [&_ol]:pl-5
           [&_ul_ul]:list-[circle] [&_ul_ul_ul]:list-[square]
           [&_blockquote]:border-l-4 [&_blockquote]:border-journal-200 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:ml-0"
         onInput={handleInput}
         placeholder={placeholder}
-        style={{ minHeight: '150px' }} 
+        style={{ minHeight: '150px' }}
       />
     </div>
   );
-};
+});
 
 export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
@@ -117,10 +155,16 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
   const [entryData, setEntryData] = useState({
     entry_date: initialEntry?.entry_date || getLocalDateStr(new Date()),
     professional_recap: initialEntry?.professional_recap || '',
+    professional_recap_audio: initialEntry?.professional_recap_audio || null,
     personal_recap: initialEntry?.personal_recap || '',
+    personal_recap_audio: initialEntry?.personal_recap_audio || null,
     learning_reflections: initialEntry?.learning_reflections || '',
-    gratitude: initialEntry?.gratitude || ''
+    learning_reflections_audio: initialEntry?.learning_reflections_audio || null,
+    gratitude: initialEntry?.gratitude || '',
+    gratitude_audio: initialEntry?.gratitude_audio || null
   });
+
+  const editorRef = useRef(null);
 
   // Calculate direction for animation (1 for next, -1 for prev)
   const [direction, setDirection] = useState(0);
@@ -306,23 +350,23 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
               </p>
               
               <RichTextEditor
-                value={(() => {
-                   const section = SECTIONS[currentSectionIndex];
-                   const fieldName = section.id === 'professional' ? 'professional_recap' 
-                    : section.id === 'personal' ? 'personal_recap'
-                    : section.id === 'learning' ? 'learning_reflections'
-                    : 'gratitude';
-                   return entryData[fieldName];
-                })()}
+                ref={editorRef}
+                value={entryData[SECTIONS[currentSectionIndex].field]}
                 onChange={(newValue) => {
-                   const section = SECTIONS[currentSectionIndex];
-                   const fieldName = section.id === 'professional' ? 'professional_recap' 
-                    : section.id === 'personal' ? 'personal_recap'
-                    : section.id === 'learning' ? 'learning_reflections'
-                    : 'gratitude';
-                   setEntryData({ ...entryData, [fieldName]: newValue });
+                  const { field } = SECTIONS[currentSectionIndex];
+                  setEntryData(prev => ({ ...prev, [field]: newValue }));
                 }}
                 placeholder="Type here..."
+                toolbarExtra={
+                  <VoiceInputButton
+                    audioValue={entryData[SECTIONS[currentSectionIndex].audioField]}
+                    onAudioChange={(audio) => {
+                      const { audioField } = SECTIONS[currentSectionIndex];
+                      setEntryData(prev => ({ ...prev, [audioField]: audio }));
+                    }}
+                    onTranscript={(text) => editorRef.current?.insertText(text)}
+                  />
+                }
               />
               
               <div className="mt-4 text-xs text-journal-300 italic">

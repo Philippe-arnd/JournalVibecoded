@@ -5,9 +5,13 @@ const API_URL = `${VITE_API_URL}/api`;
 
 const SENSITIVE_FIELDS = [
   'professional_recap',
+  'professional_recap_audio',
   'personal_recap',
+  'personal_recap_audio',
   'learning_reflections',
+  'learning_reflections_audio',
   'gratitude',
+  'gratitude_audio',
   'ai_feedback',
   'ai_cited_entries'
 ];
@@ -36,9 +40,13 @@ function toClientEntry(serverEntry) {
         user_id: serverEntry.userId,
         entry_date: serverEntry.entryDate,
         professional_recap: serverEntry.professionalRecap,
+        professional_recap_audio: serverEntry.professionalRecapAudio,
         personal_recap: serverEntry.personalRecap,
+        personal_recap_audio: serverEntry.personalRecapAudio,
         learning_reflections: serverEntry.learningReflections,
+        learning_reflections_audio: serverEntry.learningReflectionsAudio,
         gratitude: serverEntry.gratitude,
+        gratitude_audio: serverEntry.gratitudeAudio,
         ai_feedback: serverEntry.aiFeedback,
         ai_cited_entries: serverEntry.aiCitedEntries,
         created_at: serverEntry.createdAt,

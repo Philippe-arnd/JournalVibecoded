@@ -110,6 +110,50 @@ describe('Entries Routes', () => {
         expect(response.body).toEqual(savedEntry);
     });
 
+    it('POST /api/entries should pass through voice-note audio fields', async () => {
+        (auth.api.getSession as any).mockResolvedValue(mockSession);
+
+        const entryData = {
+            professional_recap: 'New work',
+            professional_recap_audio: 'data:audio/webm;base64,ZmFrZS1hdWRpby1kYXRh'
+        };
+        const savedEntry = { id: '1', userId: 'user-1' };
+
+        let insertedValues: any = null;
+        (withRLS as any).mockImplementation(async (userId, cb) => {
+            const mockTx = {
+                query: {
+                    entries: {
+                        findFirst: vi.fn().mockResolvedValue(null)
+                    }
+                },
+                insert: vi.fn().mockReturnThis(),
+                values: vi.fn((v) => { insertedValues = v; return mockTx; }),
+                returning: vi.fn().mockResolvedValue([savedEntry])
+            };
+            return await cb(mockTx);
+        });
+
+        const response = await request(app)
+            .post('/api/entries')
+            .send(entryData);
+
+        expect(response.status).toBe(200);
+        expect(insertedValues.professionalRecapAudio).toBe(entryData.professional_recap_audio);
+    });
+
+    it('POST /api/entries should reject an oversized audio field', async () => {
+        (auth.api.getSession as any).mockResolvedValue(mockSession);
+
+        const response = await request(app)
+            .post('/api/entries')
+            .send({ gratitude_audio: 'a'.repeat(2_000_001) });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toMatch(/gratitude_audio/);
+        expect(withRLS).not.toHaveBeenCalled();
+    });
+
     it('DELETE /api/entries/:id should delete an entry', async () => {
         (auth.api.getSession as any).mockResolvedValue(mockSession);
 
