@@ -8,6 +8,25 @@ const router = Router();
 
 router.use(requireAuth);
 
+// Guards against runaway DB growth from voice-note recordings (client caps
+// recordings at 60s, this is a defense-in-depth backstop against a bypassed client).
+const MAX_AUDIO_FIELD_LENGTH = 2_000_000; // ~2M chars of encrypted base64 audio
+const AUDIO_FIELDS = [
+    "professional_recap_audio",
+    "personal_recap_audio",
+    "learning_reflections_audio",
+    "gratitude_audio",
+] as const;
+
+function findOversizedAudioField(body: any): string | null {
+    for (const field of AUDIO_FIELDS) {
+        if (typeof body[field] === "string" && body[field].length > MAX_AUDIO_FIELD_LENGTH) {
+            return field;
+        }
+    }
+    return null;
+}
+
 // Get all entries
 router.get("/", async (req: any, res) => {
     try {
@@ -54,13 +73,22 @@ router.post("/", async (req: any, res) => {
         const today = new Date().toISOString().split('T')[0];
         const entryDate = body.entry_date || today;
 
+        const oversizedField = findOversizedAudioField(body);
+        if (oversizedField) {
+            return res.status(400).json({ error: `${oversizedField} exceeds the maximum allowed size` });
+        }
+
         const entryData = {
             userId: userId,
             entryDate: entryDate,
             professionalRecap: body.professional_recap,
+            professionalRecapAudio: body.professional_recap_audio,
             personalRecap: body.personal_recap,
+            personalRecapAudio: body.personal_recap_audio,
             learningReflections: body.learning_reflections,
+            learningReflectionsAudio: body.learning_reflections_audio,
             gratitude: body.gratitude,
+            gratitudeAudio: body.gratitude_audio,
             aiFeedback: body.ai_feedback,
             aiCitedEntries: body.ai_cited_entries,
             completed: body.completed || false,

@@ -21,7 +21,9 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
 }));
 
-app.use(express.json());
+// Raised from the Express default (100kb) to fit base64-encoded voice-note
+// recordings (up to 4 sections x ~2MB of encrypted audio, see routes/entries.ts).
+app.use(express.json({ limit: "10mb" }));
 
 app.use("/api/auth", (req, res, next) => {
     console.log(`Auth Request: ${req.method} ${req.path}`, req.body);

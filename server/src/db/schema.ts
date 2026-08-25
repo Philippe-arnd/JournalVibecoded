@@ -49,9 +49,13 @@ export const entries = pgTable("entries", {
     userId: text("user_id").notNull().references(() => user.id),
     entryDate: date("entry_date").notNull(),
     professionalRecap: text("professional_recap"),
+    professionalRecapAudio: text("professional_recap_audio"),
     personalRecap: text("personal_recap"),
+    personalRecapAudio: text("personal_recap_audio"),
     learningReflections: text("learning_reflections"),
+    learningReflectionsAudio: text("learning_reflections_audio"),
     gratitude: text("gratitude"),
+    gratitudeAudio: text("gratitude_audio"),
     aiFeedback: text("ai_feedback"),
     aiCitedEntries: text("ai_cited_entries"), // Encrypted JSON string
     completed: boolean("completed").default(false),
