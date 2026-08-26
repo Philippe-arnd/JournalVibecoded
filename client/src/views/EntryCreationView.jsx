@@ -206,23 +206,48 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
   // Calculate direction for animation (1 for next, -1 for prev)
   const [direction, setDirection] = useState(0);
 
-  const saveProgress = async (completed = false) => {
-    setIsSaving(true);
-    try {
-      await entryService.saveEntry({
-        ...entryData,
-        completed
-      });
-    } catch (error) {
-      console.error("Failed to save:", error);
-    } finally {
-      setIsSaving(false);
-    }
+  // Fields touched since the last successful save, so saveProgress only ships
+  // what actually changed instead of re-encrypting/re-uploading every section
+  // (including prior sections' audio) on every step transition.
+  const dirtyFieldsRef = useRef(new Set());
+  // Serializes background saves so two in-flight requests never race on the
+  // same not-yet-created row (upsert-by-date would otherwise double-insert).
+  const saveQueueRef = useRef(Promise.resolve());
+
+  const updateEntryField = (field, value) => {
+    dirtyFieldsRef.current.add(field);
+    setEntryData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleNext = async () => {
-    await saveProgress(false); // Auto-save on navigation
+  const saveProgress = (completed = false) => {
+    const fieldsToSave = Array.from(dirtyFieldsRef.current);
+    if (fieldsToSave.length === 0 && !completed) {
+      return saveQueueRef.current; // nothing changed, skip the round-trip
+    }
+    dirtyFieldsRef.current.clear();
+
+    const payload = { entry_date: entryData.entry_date, completed };
+    fieldsToSave.forEach(field => { payload[field] = entryData[field]; });
+
+    const run = async () => {
+      setIsSaving(true);
+      try {
+        await entryService.saveEntry(payload);
+      } catch (error) {
+        console.error("Failed to save:", error);
+        fieldsToSave.forEach(field => dirtyFieldsRef.current.add(field)); // retry next save
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    saveQueueRef.current = saveQueueRef.current.then(run);
+    return saveQueueRef.current;
+  };
+
+  const handleNext = () => {
     if (currentSectionIndex < SECTIONS.length - 1) {
+      saveProgress(false); // background save, doesn't block navigation
       setDirection(1);
       setCurrentSectionIndex(prev => prev + 1);
     } else {
@@ -391,7 +416,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
                 value={entryData[SECTIONS[currentSectionIndex].field]}
                 onChange={(newValue) => {
                   const { field } = SECTIONS[currentSectionIndex];
-                  setEntryData(prev => ({ ...prev, [field]: newValue }));
+                  updateEntryField(field, newValue);
                 }}
                 placeholder="Type here..."
                 voiceSlot={
@@ -399,7 +424,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
                     audioValue={entryData[SECTIONS[currentSectionIndex].audioField]}
                     onAudioChange={(audio) => {
                       const { audioField } = SECTIONS[currentSectionIndex];
-                      setEntryData(prev => ({ ...prev, [audioField]: audio }));
+                      updateEntryField(audioField, audio);
                     }}
                     onTranscript={(text) => editorRef.current?.insertTypedText(text)}
                   />
