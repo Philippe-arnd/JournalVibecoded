@@ -9,6 +9,15 @@ const AUDIO_MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp
 // already-captured audio and can fire one last onresult before onend. Cap how long we
 // wait for that flush so the UI never hangs if onend never fires.
 const RECOGNITION_FLUSH_TIMEOUT_MS = 1500;
+// Errors that will recur on every restart: retrying just spins. Anything else
+// ('no-speech', 'aborted') is a normal end-of-session and gets a new session.
+const FATAL_RECOGNITION_ERRORS = new Set([
+  'not-allowed',
+  'service-not-allowed',
+  'network',
+  'language-not-supported',
+  'audio-capture',
+]);
 
 const getSpeechRecognitionCtor = () =>
   (typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition)) || null;
@@ -19,6 +28,24 @@ const isRecordingSupported = () =>
   typeof window.MediaRecorder !== 'undefined';
 
 const isTranscriptionSupported = () => !!getSpeechRecognitionCtor();
+
+// The audio is always kept, so every message says so: the user needs to know the
+// recording survived even when the transcription didn't.
+function describeRecognitionError(code) {
+  switch (code) {
+    case 'audio-capture':
+      return "Le micro est déjà utilisé par l'enregistrement, la transcription n'a pas pu démarrer. L'audio a été conservé.";
+    case 'not-allowed':
+    case 'service-not-allowed':
+      return "Le navigateur a refusé la transcription vocale. L'audio a été conservé.";
+    case 'network':
+      return "Le service de transcription du navigateur est injoignable. L'audio a été conservé.";
+    case 'language-not-supported':
+      return `La transcription ne supporte pas la langue « ${navigator.language} ». L'audio a été conservé.`;
+    default:
+      return `La transcription a échoué (${code}). L'audio a été conservé.`;
+  }
+}
 
 function pickAudioMimeType() {
   if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return undefined;
@@ -44,13 +71,24 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
   const transcriptRef = useRef('');
-  const transcriptionErrorRef = useRef(false);
+  // Text the recognizer hasn't finalised yet. Kept separately so a session that dies
+  // mid-sentence still contributes what it had instead of dropping it.
+  const interimRef = useRef('');
+  const recognitionErrorRef = useRef(null);
+  const recordingRef = useRef(false);
   const timerRef = useRef(null);
 
   const supported = isRecordingSupported();
   const transcriptionSupported = isTranscriptionSupported();
 
+  const appendTranscript = useCallback((text) => {
+    const clean = (text || '').trim();
+    if (!clean) return;
+    transcriptRef.current = `${transcriptRef.current} ${clean}`.trim();
+  }, []);
+
   const releaseResources = useCallback(() => {
+    recordingRef.current = false;
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -70,6 +108,52 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
 
   useEffect(() => releaseResources, [releaseResources]);
 
+  // Opens one recognition session and chains a fresh one whenever the browser ends it.
+  // Chrome terminates a session on its own after a pause — and right away on 'no-speech'
+  // if the user takes a moment before talking — even with continuous = true. Without this
+  // chaining the recognizer stays silently dead for the rest of the recording, which is
+  // why transcripts came back empty.
+  const startRecognitionSession = useCallback(function startSession() {
+    const SpeechRecognitionCtor = getSpeechRecognitionCtor();
+    if (!SpeechRecognitionCtor) return;
+
+    const recognition = new SpeechRecognitionCtor();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = navigator.language || 'en-US';
+
+    recognition.onresult = (event) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) appendTranscript(result[0].transcript);
+        else interim += result[0].transcript;
+      }
+      interimRef.current = interim;
+    };
+
+    recognition.onerror = (event) => {
+      if (event?.error && FATAL_RECOGNITION_ERRORS.has(event.error)) {
+        recognitionErrorRef.current = event.error;
+      }
+    };
+
+    recognition.onend = () => {
+      // Salvage whatever this session had only partially recognised before chaining.
+      appendTranscript(interimRef.current);
+      interimRef.current = '';
+      if (!recordingRef.current || recognitionErrorRef.current) return;
+      startSession();
+    };
+
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+    } catch {
+      // start() can race with the previous session's teardown; the next onend retries.
+    }
+  }, [appendTranscript]);
+
   // Stops the recognizer and waits for its final onresult/onend to fire before
   // resolving, so the last spoken segment isn't lost when handlers are detached.
   const flushRecognition = useCallback(() => {
@@ -82,15 +166,19 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
         if (settled) return;
         settled = true;
         clearTimeout(timeoutId);
+        appendTranscript(interimRef.current);
+        interimRef.current = '';
         resolve();
       };
       timeoutId = setTimeout(finish, RECOGNITION_FLUSH_TIMEOUT_MS);
       recognition.onend = finish;
       try { recognition.stop(); } catch { finish(); }
     });
-  }, []);
+  }, [appendTranscript]);
 
   const stopRecording = useCallback(() => {
+    // Flip this before the recorder unwinds so the recognizer's onend stops chaining.
+    recordingRef.current = false;
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
@@ -103,7 +191,8 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
       streamRef.current = stream;
       chunksRef.current = [];
       transcriptRef.current = '';
-      transcriptionErrorRef.current = false;
+      interimRef.current = '';
+      recognitionErrorRef.current = null;
 
       const mimeType = pickAudioMimeType();
       const recorder = new MediaRecorder(stream, {
@@ -117,6 +206,7 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
       };
 
       recorder.onstop = async () => {
+        recordingRef.current = false;
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
         if (recognitionRef.current) {
           setStatus('transcribing');
@@ -130,8 +220,10 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
           const transcript = transcriptRef.current.trim();
           if (transcript) {
             onTranscript(transcript);
-          } else if (transcriptionErrorRef.current) {
-            setErrorMessage("La transcription a échoué, l'audio a été conservé.");
+          } else if (recognitionErrorRef.current) {
+            setErrorMessage(describeRecognitionError(recognitionErrorRef.current));
+          } else if (transcriptionSupported) {
+            setErrorMessage("Aucune parole n'a été reconnue, l'audio a été conservé.");
           }
         } catch {
           setErrorMessage("Impossible d'enregistrer l'audio.");
@@ -142,35 +234,10 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
       };
 
       recorder.start();
+      recordingRef.current = true;
       setStatus('recording');
 
-      const SpeechRecognitionCtor = getSpeechRecognitionCtor();
-      if (SpeechRecognitionCtor) {
-        const recognition = new SpeechRecognitionCtor();
-        recognition.continuous = true;
-        recognition.interimResults = false;
-        recognition.lang = navigator.language || 'en-US';
-        recognition.onresult = (event) => {
-          let finalText = '';
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            if (event.results[i].isFinal) {
-              finalText += event.results[i][0].transcript;
-            }
-          }
-          if (finalText) {
-            transcriptRef.current = `${transcriptRef.current} ${finalText}`.trim();
-          }
-        };
-        // Live transcription is best-effort; the audio recording is kept even if it fails.
-        // 'no-speech'/'aborted' are expected (silence, or our own stop()) and not real failures.
-        recognition.onerror = (event) => {
-          if (event?.error !== 'no-speech' && event?.error !== 'aborted') {
-            transcriptionErrorRef.current = true;
-          }
-        };
-        recognitionRef.current = recognition;
-        try { recognition.start(); } catch { /* already running */ }
-      }
+      startRecognitionSession();
 
       let seconds = 0;
       timerRef.current = setInterval(() => {
@@ -182,6 +249,7 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
       }, 1000);
     } catch {
       setErrorMessage('Microphone inaccessible. Vérifiez les permissions.');
+      recordingRef.current = false;
       setStatus('idle');
     }
   };
