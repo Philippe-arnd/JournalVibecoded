@@ -39,7 +39,7 @@ const SECTIONS = [
   }
 ];
 
-const RichTextEditor = forwardRef(({ value, onChange, placeholder, toolbarExtra }, ref) => {
+const RichTextEditor = forwardRef(({ value, onChange, placeholder, voiceSlot }, ref) => {
   const editorRef = useRef(null);
 
   // Initial value only
@@ -128,10 +128,10 @@ const RichTextEditor = forwardRef(({ value, onChange, placeholder, toolbarExtra 
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex items-center gap-1 mb-2 border-b border-journal-100 pb-2">
+      <div className="flex flex-wrap items-center gap-1 mb-2 border-b border-journal-100 pb-2">
         <button
           onClick={() => exec('bold')}
-          className="p-1.5 text-journal-400 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
+          className="flex items-center justify-center min-h-[44px] min-w-[44px] text-journal-500 hover:text-journal-900 hover:bg-journal-50 rounded-lg transition-colors touch-manipulation"
           title="Bold"
         >
           <Bold size={18} />
@@ -139,26 +139,26 @@ const RichTextEditor = forwardRef(({ value, onChange, placeholder, toolbarExtra 
         <div className="w-px bg-journal-100 mx-1" />
         <button
           onClick={() => exec('insertUnorderedList')}
-          className="p-1.5 text-journal-400 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
+          className="flex items-center justify-center min-h-[44px] min-w-[44px] text-journal-500 hover:text-journal-900 hover:bg-journal-50 rounded-lg transition-colors touch-manipulation"
           title="Bullet List"
         >
           <List size={18} />
         </button>
         <button
           onClick={() => exec('outdent')}
-          className="p-1.5 text-journal-400 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
+          className="flex items-center justify-center min-h-[44px] min-w-[44px] text-journal-500 hover:text-journal-900 hover:bg-journal-50 rounded-lg transition-colors touch-manipulation"
           title="Outdent"
         >
           <Outdent size={18} />
         </button>
         <button
           onClick={() => exec('indent')}
-          className="p-1.5 text-journal-400 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
+          className="flex items-center justify-center min-h-[44px] min-w-[44px] text-journal-500 hover:text-journal-900 hover:bg-journal-50 rounded-lg transition-colors touch-manipulation"
           title="Indent"
         >
           <Indent size={18} />
         </button>
-        {toolbarExtra && <div className="ml-auto flex items-center">{toolbarExtra}</div>}
+        {voiceSlot}
       </div>
 
       <div
@@ -279,11 +279,11 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
           <X size={24} />
         </button>
         <div className="flex items-center gap-3">
-           <div className="text-xs font-bold text-journal-400 uppercase tracking-widest">
+           <div className="text-xs font-bold text-journal-500 uppercase tracking-widest">
               {currentSectionIndex + 1} / {SECTIONS.length}
           </div>
           <div className="w-4 flex justify-end">
-            {isSaving && <Loader2 size={16} className="animate-spin text-journal-400" />}
+            {isSaving && <Loader2 size={16} className="animate-spin text-journal-500" />}
           </div>
         </div>
       </div>
@@ -358,7 +358,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
                 <div className="absolute top-6 left-6 z-20">
                   <button 
                     onClick={handlePrev}
-                    className="bg-white border border-journal-100 text-journal-400 p-2 rounded-full shadow-sm hover:text-journal-900 hover:scale-105 active:scale-95 transition-all"
+                    className="bg-white border border-journal-100 text-journal-500 p-2 rounded-full shadow-sm hover:text-journal-900 hover:scale-105 active:scale-95 transition-all"
                   >
                     <ArrowLeft size={18} />
                   </button>
@@ -368,7 +368,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
             <div className="p-8 pt-16 flex-1 flex flex-col min-h-0">
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <span className="text-sm font-bold text-journal-300 uppercase tracking-widest">
+                  <span className="text-sm font-bold text-journal-500 uppercase tracking-widest">
                     {new Date(entryData.entry_date + 'T00:00:00').toLocaleDateString('en-US', { 
                       weekday: 'long',
                       month: 'short',
@@ -394,7 +394,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
                   setEntryData(prev => ({ ...prev, [field]: newValue }));
                 }}
                 placeholder="Type here..."
-                toolbarExtra={
+                voiceSlot={
                   <VoiceInputButton
                     audioValue={entryData[SECTIONS[currentSectionIndex].audioField]}
                     onAudioChange={(audio) => {
@@ -406,7 +406,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
                 }
               />
               
-              <div className="mt-4 text-xs text-journal-300 italic">
+              <div className="mt-4 text-xs text-journal-500 italic">
                 {SECTIONS[currentSectionIndex].helper}
               </div>
             </div>

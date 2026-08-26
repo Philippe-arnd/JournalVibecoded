@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Mic, Square, Loader2, Trash2 } from 'lucide-react';
+import { Mic, Square, Loader2, Play, Pause, RotateCcw } from 'lucide-react';
 import { transcribeAudio } from '../services/transcriptionService';
+import { getTranscriptionLanguage } from '../utils/transcriptionLanguage';
 
 // Recording is capped at 60s client-side to keep audio payloads small
 // (stored as encrypted base64 alongside the entry text, see entryService.js)
@@ -27,20 +28,32 @@ function blobToBase64(blob) {
   });
 }
 
+function formatTime(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+}
+
 export default function VoiceInputButton({ audioValue, onAudioChange, onTranscript }) {
   const [status, setStatus] = useState('idle'); // idle | recording | processing | transcribing
   const [elapsed, setElapsed] = useState(0);
   const [errorMessage, setErrorMessage] = useState(null);
 
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
-  // Guards the async tail of onstop: the component can be unmounted (card swiped
-  // away) while a transcription is still in flight.
+  const audioRef = useRef(null);
+  // Guards the async tail of onstop: the card can be swiped away while a
+  // transcription is still in flight.
   const mountedRef = useRef(true);
 
   const supported = isRecordingSupported();
+  const busy = status === 'processing' || status === 'transcribing';
 
   const releaseResources = useCallback(() => {
     if (timerRef.current) {
@@ -61,6 +74,13 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
     };
   }, [releaseResources]);
 
+  // A new recording invalidates the player's position and duration.
+  useEffect(() => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+  }, [audioValue]);
+
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
@@ -69,6 +89,7 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
 
   const startRecording = async () => {
     setErrorMessage(null);
+    if (audioRef.current) audioRef.current.pause();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -105,7 +126,7 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
 
         setStatus('transcribing');
         try {
-          const text = await transcribeAudio(blob);
+          const text = await transcribeAudio(blob, getTranscriptionLanguage());
           if (!mountedRef.current) return;
           if (text) {
             onTranscript(text);
@@ -139,55 +160,198 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
     }
   };
 
+  const togglePlayback = () => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (el.paused) el.play().catch(() => setErrorMessage('Lecture impossible.'));
+    else el.pause();
+  };
+
+  // MediaRecorder blobs carry no duration header, so browsers report Infinity until
+  // the element has seeked past the end. Force that seek, then rewind.
+  const handleLoadedMetadata = () => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (Number.isFinite(el.duration)) {
+      setDuration(el.duration);
+      return;
+    }
+    const onTimeUpdate = () => {
+      el.removeEventListener('timeupdate', onTimeUpdate);
+      if (Number.isFinite(el.duration)) setDuration(el.duration);
+      el.currentTime = 0;
+    };
+    el.addEventListener('timeupdate', onTimeUpdate);
+    el.currentTime = 1e101;
+  };
+
+  const handleSeek = (event) => {
+    const el = audioRef.current;
+    const value = Number(event.target.value);
+    if (el && Number.isFinite(value)) {
+      el.currentTime = value;
+      setCurrentTime(value);
+    }
+  };
+
   if (!supported) return null;
 
+  // Every interactive element is sized for a thumb (>=44px) rather than a cursor:
+  // on mobile the mic is the primary way into a card, not a secondary affordance.
+  // The round controls show a 36px disc inside a 44px button: the smaller disc leaves
+  // breathing room inside the 48px pill while the hit area stays thumb-sized.
+  // Same idea for the scrubber below — a 4px native track is fine with a mouse and
+  // unusable with a thumb, so the input keeps a tall touch area over a thin track.
+  const scrubberClasses = `flex-1 min-w-0 h-11 bg-transparent appearance-none cursor-pointer
+    touch-manipulation disabled:cursor-not-allowed
+    [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:rounded-full
+    [&::-webkit-slider-runnable-track]:bg-journal-200
+    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4
+    [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:-mt-[5px]
+    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-journal-500
+    [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:rounded-full
+    [&::-moz-range-track]:bg-journal-200
+    [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:border-0
+    [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-journal-500`;
+
+  const micButton = (
+    <button
+      type="button"
+      onClick={startRecording}
+      aria-label="Enregistrer un vocal"
+      title="Enregistrer un vocal"
+      className="flex items-center justify-center min-h-[44px] min-w-[44px]
+        rounded-lg text-journal-500 hover:text-journal-900 hover:bg-journal-50
+        active:scale-95 transition-all touch-manipulation"
+    >
+      <Mic size={18} />
+    </button>
+  );
+
+  // Idle with nothing to show sits inline at the end of the toolbar, discreet like the
+  // format buttons. Every other state — including an error worth reading — needs a full
+  // row, claimed via basis-full since the toolbar is flex-wrap. Transcription language
+  // lives in Settings: it is a set-once preference, not a per-recording decision.
+  const compact = status === 'idle' && !audioValue && !errorMessage;
+
   return (
-    <div className="flex items-center gap-2">
-      {status === 'idle' && (
-        <button
-          type="button"
-          onClick={startRecording}
-          className="p-1.5 text-journal-400 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
-          title="Enregistrer un vocal"
-        >
-          <Mic size={18} />
-        </button>
+    <div className={compact
+      ? 'ml-auto flex items-center'
+      : 'basis-full w-full flex flex-col gap-1.5 mt-2'}>
+      {status === 'idle' && !audioValue && (
+        compact ? micButton : <div className="flex justify-end">{micButton}</div>
       )}
+
       {status === 'recording' && (
-        <button
-          type="button"
-          onClick={stopRecording}
-          className="p-1.5 flex items-center gap-1.5 text-journal-accent hover:bg-journal-50 rounded transition-colors"
-          title="Arrêter l'enregistrement"
-        >
-          <Square size={16} className="fill-current" />
-          <span className="text-xs tabular-nums">{MAX_RECORDING_SECONDS - elapsed}s</span>
-        </button>
-      )}
-      {status === 'processing' && (
-        <Loader2 size={18} className="animate-spin text-journal-400" title="Enregistrement de l'audio" />
-      )}
-      {status === 'transcribing' && (
-        <span className="flex items-center gap-1.5 text-journal-400" title="Transcription en cours">
-          <Loader2 size={18} className="animate-spin" />
-          <span className="text-xs">Transcription…</span>
-        </span>
-      )}
-      {audioValue && status === 'idle' && (
-        <>
-          <audio controls src={audioValue} className="h-8 max-w-[140px]" />
+        <div className="w-full flex items-center gap-3 min-h-[48px] px-3 rounded-2xl
+          bg-journal-accent/10 border border-journal-accent/30">
+          <span className="relative flex h-2.5 w-2.5 shrink-0" aria-hidden="true">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full
+              bg-journal-accent opacity-60" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-journal-accent" />
+          </span>
+          <span className="text-sm font-semibold text-journal-900 tabular-nums shrink-0">
+            {formatTime(elapsed)}
+          </span>
+          {/* Fills as the 60s cap approaches, so the limit is visible before it hits. */}
+          <div className="flex-1 min-w-0 h-1.5 rounded-full bg-journal-accent/25 overflow-hidden">
+            <div
+              className="h-full bg-journal-accent transition-[width] duration-1000 ease-linear"
+              style={{ width: `${(elapsed / MAX_RECORDING_SECONDS) * 100}%` }}
+            />
+          </div>
           <button
             type="button"
-            onClick={() => onAudioChange(null)}
-            className="p-1.5 text-journal-300 hover:text-journal-accent hover:bg-journal-50 rounded transition-colors"
-            title="Supprimer l'enregistrement"
+            onClick={stopRecording}
+            aria-label="Arrêter l'enregistrement"
+            className="group shrink-0 flex items-center justify-center h-11 w-11
+              touch-manipulation"
           >
-            <Trash2 size={16} />
+            <span className="flex items-center justify-center h-9 w-9 rounded-full
+              bg-journal-accent text-white group-hover:opacity-90 group-active:scale-95
+              transition-all">
+              <Square size={15} className="fill-current" />
+            </span>
           </button>
-        </>
+        </div>
       )}
+
+      {busy && (
+        <div className="w-full flex items-center gap-2.5 min-h-[48px] px-4 rounded-2xl
+          bg-journal-100 border border-journal-200">
+          <Loader2 size={17} className="animate-spin text-journal-500 shrink-0" />
+          <span className="text-sm font-semibold text-journal-800">
+            {status === 'processing' ? 'Enregistrement…' : 'Transcription…'}
+          </span>
+        </div>
+      )}
+
+      {status === 'idle' && audioValue && (
+        <div className="w-full flex items-center gap-1.5 min-h-[48px] px-2 rounded-2xl
+          bg-journal-100 border border-journal-200">
+          <button
+            type="button"
+            onClick={togglePlayback}
+            aria-label={isPlaying ? 'Mettre en pause' : 'Écouter'}
+            className="group shrink-0 flex items-center justify-center h-11 w-11
+              touch-manipulation"
+          >
+            <span className="flex items-center justify-center h-9 w-9 rounded-full
+              bg-journal-500 text-white group-hover:bg-journal-800 group-active:scale-95
+              transition-all">
+              {isPlaying
+                ? <Pause size={15} className="fill-current" />
+                : <Play size={15} className="fill-current translate-x-[1px]" />}
+            </span>
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={duration || 0}
+            step={0.1}
+            value={Math.min(currentTime, duration || 0)}
+            onChange={handleSeek}
+            disabled={!duration}
+            aria-label="Position de lecture"
+            className={scrubberClasses}
+          />
+          <span className="shrink-0 text-xs font-semibold text-journal-800 tabular-nums">
+            {formatTime(currentTime)}&nbsp;/&nbsp;{formatTime(duration)}
+          </span>
+          {/* Re-recording replaces the take; there is deliberately no delete action. */}
+          <button
+            type="button"
+            onClick={startRecording}
+            aria-label="Réenregistrer"
+            title="Réenregistrer"
+            className="group shrink-0 flex items-center justify-center h-11 w-11
+              touch-manipulation"
+          >
+            <span className="flex items-center justify-center h-9 w-9 rounded-full
+              text-journal-500 group-hover:text-journal-900 group-hover:bg-journal-200
+              group-active:scale-95 transition-all">
+              <RotateCcw size={16} />
+            </span>
+          </button>
+        </div>
+      )}
+
+      {audioValue && (
+        <audio
+          ref={audioRef}
+          src={audioValue}
+          preload="metadata"
+          className="hidden"
+          onLoadedMetadata={handleLoadedMetadata}
+          onTimeUpdate={(event) => setCurrentTime(event.target.currentTime)}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onEnded={() => { setIsPlaying(false); setCurrentTime(0); }}
+        />
+      )}
+
       {errorMessage && (
-        <span className="text-xs text-journal-accent">{errorMessage}</span>
+        <span className="text-xs text-journal-accent leading-snug px-1">{errorMessage}</span>
       )}
     </div>
   );

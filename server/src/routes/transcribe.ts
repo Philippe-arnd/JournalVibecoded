@@ -10,6 +10,15 @@ router.use(requireAuth);
 const WHISPER_URL = process.env.WHISPER_URL || "http://whisper:9000";
 const WHISPER_LANGUAGE = process.env.WHISPER_LANGUAGE || "fr";
 
+// Whisper accepts ~99 languages, but the client only offers these. Validating against
+// a fixed set keeps arbitrary caller input out of the whisper query string and turns a
+// typo into a 400 instead of a silently failed transcription.
+const SUPPORTED_LANGUAGES = new Set(["fr", "en", "it", "es", "de"]);
+// Whisper detects the language itself when the parameter is omitted. Offered as an
+// explicit choice, never as the default: detection reads only the first 30s window and
+// gets confused by code-switching, which is common when dictating technical notes.
+const AUTO_LANGUAGE = "auto";
+
 // The client caps recordings at 60s (~240KB of 32kbps opus). 5MB leaves room for
 // browsers that fall back to a bulkier codec without letting a bypassed client
 // queue an arbitrarily long job on a CPU-bound service.
@@ -54,14 +63,19 @@ router.post(
             return res.status(400).json({ error: "Missing audio payload" });
         }
 
+        const requested = typeof req.query.language === "string" ? req.query.language : "";
+        if (requested && requested !== AUTO_LANGUAGE && !SUPPORTED_LANGUAGES.has(requested)) {
+            return res.status(400).json({ error: "Unsupported language" });
+        }
+        const language = requested || WHISPER_LANGUAGE;
+
         try {
             const contentType = req.get("content-type") || "audio/webm";
             const form = new FormData();
             form.append("audio_file", new Blob([req.body], { type: contentType }), "recording.webm");
 
-            const url = `${WHISPER_URL}/asr?task=transcribe`
-                + `&language=${encodeURIComponent(WHISPER_LANGUAGE)}`
-                + `&output=json`;
+            const url = `${WHISPER_URL}/asr?task=transcribe&output=json`
+                + (language === AUTO_LANGUAGE ? "" : `&language=${encodeURIComponent(language)}`);
 
             const whisperRes = await fetch(url, {
                 method: "POST",

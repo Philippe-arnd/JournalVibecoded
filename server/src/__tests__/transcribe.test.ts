@@ -104,6 +104,40 @@ describe('POST /api/transcribe', () => {
         expect(response.status).toBe(504);
     });
 
+    it('forwards a supported language chosen by the client', async () => {
+        const fetchMock = mockWhisper(okWhisper('ok'));
+
+        await request(app)
+            .post('/api/transcribe?language=it')
+            .set('Content-Type', 'audio/webm')
+            .send(AUDIO);
+
+        expect(fetchMock.mock.calls[0][0]).toContain('language=it');
+    });
+
+    it('omits the language parameter entirely when asked to auto-detect', async () => {
+        const fetchMock = mockWhisper(okWhisper('ok'));
+
+        await request(app)
+            .post('/api/transcribe?language=auto')
+            .set('Content-Type', 'audio/webm')
+            .send(AUDIO);
+
+        expect(fetchMock.mock.calls[0][0]).not.toContain('language=');
+    });
+
+    it('rejects a language outside the allowlist instead of forwarding it', async () => {
+        const fetchMock = mockWhisper(okWhisper('ok'));
+
+        const response = await request(app)
+            .post('/api/transcribe?language=klingon')
+            .set('Content-Type', 'audio/webm')
+            .send(AUDIO);
+
+        expect(response.status).toBe(400);
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
     it('rate-limits a user hammering the CPU-bound endpoint', async () => {
         mockWhisper(okWhisper('ok'));
 

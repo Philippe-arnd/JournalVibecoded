@@ -178,6 +178,23 @@ through the existing `saveEntry()` path.
 - Audio reaches the server unencrypted, which does not weaken the existing model:
   `VITE_ENCRYPTION_KEY` is a build-time constant on the same infrastructure, so the
   server could already decrypt stored audio. Nothing leaves Phil's infra.
+- The language comes from the client (`?language=`), validated server-side against a
+  fixed allowlist (`fr`, `en`, `it`, `es`, `de`, plus `auto`). `auto` omits the parameter
+  so whisper detects — offered but never the default, since detection reads only the
+  first 30s window and code-switching flips it.
+- The preference lives in Settings (`SettingsModal` in `HomeView.jsx`), not on the card:
+  it is set once, not chosen per recording. `utils/transcriptionLanguage.js` owns the
+  `localStorage` key, seeded from `navigator.language`. `VoiceInputButton` reads it at
+  record time rather than caching it, so a change in Settings applies to the next
+  recording with no plumbing between the two.
+- `VoiceInputButton` renders into the format toolbar (`voiceSlot`). Idle, it is a
+  discreet icon button at the end of the row; every other state claims a full wrapped
+  line via `basis-full` (the toolbar is `flex-wrap`), because a player never fits beside
+  four toolbar buttons on a phone. Playback uses a custom UI over a hidden `<audio>`
+  element — the native `controls` widget is neither on-brand nor responsive. Re-recording
+  replaces the take; there is deliberately no delete action.
+- Touch targets are 44px minimum throughout, and the language `<select>` is 16px: Safari
+  iOS auto-zooms the page when a smaller form control takes focus.
 - The model (`WHISPER_MODEL`, default `small`) is a speed/quality trade-off on a CPU-only
   host. On 4 vCPU, `small` runs ~3x realtime: a 20s note transcribes in ~7s, a full 60s
   note in ~20s. `base` is ~2x faster with noticeably more errors in French; `medium` is
