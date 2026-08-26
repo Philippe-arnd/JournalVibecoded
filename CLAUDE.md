@@ -178,6 +178,16 @@ through the existing `saveEntry()` path.
 - Audio reaches the server unencrypted, which does not weaken the existing model:
   `VITE_ENCRYPTION_KEY` is a build-time constant on the same infrastructure, so the
   server could already decrypt stored audio. Nothing leaves Phil's infra.
+- The language comes from the client (`?language=`), validated server-side against a
+  fixed allowlist (`fr`, `en`, `it`, `es`, `de`, plus `auto`). The picker is persisted in
+  `localStorage` and seeded from `navigator.language`. `auto` omits the parameter so
+  whisper detects — offered but never the default, since detection reads only the first
+  30s window and code-switching flips it.
+- The voice control is its own full-width row under the format toolbar (`voiceSlot`), not
+  a toolbar button: an audio player plus a language picker never fits beside four toolbar
+  buttons on a phone. Playback uses a custom UI over a hidden `<audio>` element — the
+  native `controls` widget is neither on-brand nor responsive. Re-recording replaces the
+  take; there is deliberately no delete action.
 - The model (`WHISPER_MODEL`, default `small`) is a speed/quality trade-off on a CPU-only
   host. On 4 vCPU, `small` runs ~3x realtime: a 20s note transcribes in ~7s, a full 60s
   note in ~20s. `base` is ~2x faster with noticeably more errors in French; `medium` is
