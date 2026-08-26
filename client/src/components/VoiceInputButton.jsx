@@ -75,6 +75,10 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
   // mid-sentence still contributes what it had instead of dropping it.
   const interimRef = useRef('');
   const recognitionErrorRef = useRef(null);
+  // Set as soon as any session actually receives mic audio. If it never flips, the
+  // recognizer never got the microphone at all (Android/iOS allow a single consumer,
+  // and MediaRecorder already holds it) — a different failure from "heard nothing".
+  const recognizerGotAudioRef = useRef(false);
   const recordingRef = useRef(false);
   const timerRef = useRef(null);
 
@@ -94,6 +98,7 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
       timerRef.current = null;
     }
     if (recognitionRef.current) {
+      recognitionRef.current.onaudiostart = null;
       recognitionRef.current.onresult = null;
       recognitionRef.current.onerror = null;
       recognitionRef.current.onend = null;
@@ -121,6 +126,10 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = navigator.language || 'en-US';
+
+    recognition.onaudiostart = () => {
+      recognizerGotAudioRef.current = true;
+    };
 
     recognition.onresult = (event) => {
       let interim = '';
@@ -193,6 +202,7 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
       transcriptRef.current = '';
       interimRef.current = '';
       recognitionErrorRef.current = null;
+      recognizerGotAudioRef.current = false;
 
       const mimeType = pickAudioMimeType();
       const recorder = new MediaRecorder(stream, {
@@ -222,6 +232,8 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
             onTranscript(transcript);
           } else if (recognitionErrorRef.current) {
             setErrorMessage(describeRecognitionError(recognitionErrorRef.current));
+          } else if (!recognizerGotAudioRef.current) {
+            setErrorMessage(describeRecognitionError('audio-capture'));
           } else if (transcriptionSupported) {
             setErrorMessage("Aucune parole n'a été reconnue, l'audio a été conservé.");
           }
