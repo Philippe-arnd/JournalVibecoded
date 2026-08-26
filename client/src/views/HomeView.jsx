@@ -1,4 +1,5 @@
-import { Plus, ChevronDown, Trash2, Edit2, Calendar as CalendarIcon, List, Settings, LogOut, Lock, X, ChevronLeft, ChevronRight, Sparkles, Loader2, Snowflake } from 'lucide-react';
+import { Plus, ChevronDown, Trash2, Edit2, Calendar as CalendarIcon, List, Settings, LogOut, Lock, X, ChevronLeft, ChevronRight, Sparkles, Loader2, Snowflake, Mic } from 'lucide-react';
+import { TRANSCRIPTION_LANGUAGES, getTranscriptionLanguage, setTranscriptionLanguage } from '../utils/transcriptionLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -516,6 +517,7 @@ function TimelineCard({ entry, onEdit, onDelete }) {
 function SettingsModal({ onClose, onSignOut }) {
   const { changePassword } = useAuth();
   const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [transcriptionLanguage, setTranscriptionLanguageState] = useState(getTranscriptionLanguage);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -680,7 +682,41 @@ function SettingsModal({ onClose, onSignOut }) {
             // Settings Menu
             <>
               <div>
-                <h3 className="text-xs font-bold text-journal-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <h3 className="text-xs font-bold text-journal-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Mic size={14} /> Voice
+                </h3>
+                <label htmlFor="transcription-language" className="block text-sm text-journal-900 mb-2">
+                  Transcription language
+                </label>
+                <div className="relative">
+                  <select
+                    id="transcription-language"
+                    value={transcriptionLanguage}
+                    onChange={(e) => {
+                      setTranscriptionLanguageState(e.target.value);
+                      setTranscriptionLanguage(e.target.value);
+                    }}
+                    className="w-full appearance-none bg-journal-50 hover:bg-journal-100 text-journal-900
+                      p-3 pr-10 rounded-lg text-sm font-medium transition-colors cursor-pointer
+                      focus:outline-none focus:ring-2 focus:ring-journal-500/40"
+                  >
+                    {TRANSCRIPTION_LANGUAGES.map((entry) => (
+                      <option key={entry.code} value={entry.code}>{entry.label}</option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={16}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-journal-500 pointer-events-none"
+                  />
+                </div>
+                <p className="mt-2 text-xs text-journal-500 leading-relaxed">
+                  Automatic detection reads only the first 30 seconds and gets confused when
+                  you mix languages, so pick one if you can.
+                </p>
+              </div>
+
+              <div className="pt-6 border-t border-journal-50">
+                <h3 className="text-xs font-bold text-journal-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                   <Lock size={14} /> Security
                 </h3>
                 <button

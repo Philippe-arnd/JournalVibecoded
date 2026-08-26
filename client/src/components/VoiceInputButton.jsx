@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Mic, Square, Loader2, Play, Pause, RotateCcw, ChevronDown } from 'lucide-react';
+import { Mic, Square, Loader2, Play, Pause, RotateCcw } from 'lucide-react';
 import { transcribeAudio } from '../services/transcriptionService';
+import { getTranscriptionLanguage } from '../utils/transcriptionLanguage';
 
 // Recording is capped at 60s client-side to keep audio payloads small
 // (stored as encrypted base64 alongside the entry text, see entryService.js)
@@ -8,35 +9,10 @@ import { transcribeAudio } from '../services/transcriptionService';
 const MAX_RECORDING_SECONDS = 60;
 const AUDIO_MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
 
-// Kept in sync with SUPPORTED_LANGUAGES in server/src/routes/transcribe.ts.
-// 'auto' is offered but never the default: whisper detects from the first 30s
-// window only, and code-switching (French notes peppered with English tech terms)
-// flips it easily.
-const LANGUAGES = [
-  { code: 'fr', label: 'Français', short: 'FR' },
-  { code: 'en', label: 'English', short: 'EN' },
-  { code: 'it', label: 'Italiano', short: 'IT' },
-  { code: 'es', label: 'Español', short: 'ES' },
-  { code: 'de', label: 'Deutsch', short: 'DE' },
-  { code: 'auto', label: 'Détection auto', short: 'AUTO' },
-];
-const LANGUAGE_STORAGE_KEY = 'journal.transcription.language';
-
 const isRecordingSupported = () =>
   typeof window !== 'undefined' &&
   !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) &&
   typeof window.MediaRecorder !== 'undefined';
-
-function resolveInitialLanguage() {
-  try {
-    const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    if (stored && LANGUAGES.some((entry) => entry.code === stored)) return stored;
-  } catch {
-    // Storage can throw in private mode; fall through to the browser default.
-  }
-  const browser = (navigator.language || '').slice(0, 2).toLowerCase();
-  return LANGUAGES.some((entry) => entry.code === browser) ? browser : 'fr';
-}
 
 function pickAudioMimeType() {
   if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return undefined;
@@ -62,7 +38,6 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
   const [status, setStatus] = useState('idle'); // idle | recording | processing | transcribing
   const [elapsed, setElapsed] = useState(0);
   const [errorMessage, setErrorMessage] = useState(null);
-  const [language, setLanguage] = useState(resolveInitialLanguage);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -73,22 +48,12 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
   const audioRef = useRef(null);
-  const languageRef = useRef(language);
   // Guards the async tail of onstop: the card can be swiped away while a
   // transcription is still in flight.
   const mountedRef = useRef(true);
 
   const supported = isRecordingSupported();
   const busy = status === 'processing' || status === 'transcribing';
-
-  useEffect(() => {
-    languageRef.current = language;
-    try {
-      localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-    } catch {
-      // Preference just won't persist; not worth surfacing.
-    }
-  }, [language]);
 
   const releaseResources = useCallback(() => {
     if (timerRef.current) {
@@ -161,7 +126,7 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
 
         setStatus('transcribing');
         try {
-          const text = await transcribeAudio(blob, languageRef.current);
+          const text = await transcribeAudio(blob, getTranscriptionLanguage());
           if (!mountedRef.current) return;
           if (text) {
             onTranscript(text);
@@ -233,33 +198,6 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
 
   // Every interactive element is sized for a thumb (>=44px) rather than a cursor:
   // on mobile the mic is the primary way into a card, not a secondary affordance.
-  const languageRow = (
-    <div className="flex items-center justify-end gap-2">
-      <span className="text-xs text-journal-800">Langue</span>
-      <div className="relative shrink-0">
-        <select
-          value={language}
-          onChange={(event) => setLanguage(event.target.value)}
-          aria-label="Langue de transcription"
-          // text-base (16px) is deliberate: Safari iOS auto-zooms the page when a
-          // form control smaller than that takes focus.
-          className="appearance-none bg-journal-100 text-journal-800 text-base font-semibold
-            rounded-full pl-4 pr-9 min-h-[44px] border border-journal-200 cursor-pointer
-            hover:border-journal-500 focus:outline-none focus:ring-2 focus:ring-journal-500/40
-            transition-colors touch-manipulation"
-        >
-          {LANGUAGES.map((entry) => (
-            <option key={entry.code} value={entry.code}>{entry.short}</option>
-          ))}
-        </select>
-        <ChevronDown
-          size={16}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-journal-500 pointer-events-none"
-        />
-      </div>
-    </div>
-  );
-
   // A 4px native track is fine with a mouse and unusable with a thumb, so the input
   // keeps a tall touch area while the visible track stays thin.
   const scrubberClasses = `flex-1 min-w-0 h-11 bg-transparent appearance-none cursor-pointer
@@ -274,19 +212,32 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
     [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:border-0
     [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-journal-500`;
 
+  const micButton = (
+    <button
+      type="button"
+      onClick={startRecording}
+      aria-label="Enregistrer un vocal"
+      title="Enregistrer un vocal"
+      className="flex items-center justify-center min-h-[44px] min-w-[44px]
+        rounded-lg text-journal-500 hover:text-journal-900 hover:bg-journal-50
+        active:scale-95 transition-all touch-manipulation"
+    >
+      <Mic size={18} />
+    </button>
+  );
+
+  // Idle with nothing to show sits inline at the end of the toolbar, discreet like the
+  // format buttons. Every other state — including an error worth reading — needs a full
+  // row, claimed via basis-full since the toolbar is flex-wrap. Transcription language
+  // lives in Settings: it is a set-once preference, not a per-recording decision.
+  const compact = status === 'idle' && !audioValue && !errorMessage;
+
   return (
-    <div className="w-full flex flex-col gap-2">
+    <div className={compact
+      ? 'ml-auto flex items-center'
+      : 'basis-full w-full flex flex-col gap-1.5 mt-2'}>
       {status === 'idle' && !audioValue && (
-        <button
-          type="button"
-          onClick={startRecording}
-          className="w-full flex items-center justify-center gap-2 min-h-[48px] px-4
-            rounded-2xl bg-journal-500 text-white text-sm font-semibold shadow-sm
-            hover:bg-journal-800 active:scale-[0.98] transition-all touch-manipulation"
-        >
-          <Mic size={18} />
-          Enregistrer un vocal
-        </button>
+        compact ? micButton : <div className="flex justify-end">{micButton}</div>
       )}
 
       {status === 'recording' && (
@@ -331,55 +282,48 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
       )}
 
       {status === 'idle' && audioValue && (
-        <>
-          <div className="w-full flex items-center gap-2 min-h-[48px] px-2 rounded-2xl
-            bg-journal-100 border border-journal-200">
-            <button
-              type="button"
-              onClick={togglePlayback}
-              aria-label={isPlaying ? 'Mettre en pause' : 'Écouter'}
-              className="shrink-0 flex items-center justify-center h-11 w-11 rounded-full
-                bg-journal-500 text-white hover:bg-journal-800 active:scale-95
-                transition-all touch-manipulation"
-            >
-              {isPlaying
-                ? <Pause size={15} className="fill-current" />
-                : <Play size={15} className="fill-current translate-x-[1px]" />}
-            </button>
-            <input
-              type="range"
-              min={0}
-              max={duration || 0}
-              step={0.1}
-              value={Math.min(currentTime, duration || 0)}
-              onChange={handleSeek}
-              disabled={!duration}
-              aria-label="Position de lecture"
-              className={scrubberClasses}
-            />
-            <span className="shrink-0 pr-1 text-xs font-semibold text-journal-800 tabular-nums">
-              {formatTime(currentTime)}&nbsp;/&nbsp;{formatTime(duration)}
-            </span>
-          </div>
-
+        <div className="w-full flex items-center gap-1.5 min-h-[48px] px-2 rounded-2xl
+          bg-journal-100 border border-journal-200">
+          <button
+            type="button"
+            onClick={togglePlayback}
+            aria-label={isPlaying ? 'Mettre en pause' : 'Écouter'}
+            className="shrink-0 flex items-center justify-center h-11 w-11 rounded-full
+              bg-journal-500 text-white hover:bg-journal-800 active:scale-95
+              transition-all touch-manipulation"
+          >
+            {isPlaying
+              ? <Pause size={15} className="fill-current" />
+              : <Play size={15} className="fill-current translate-x-[1px]" />}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={duration || 0}
+            step={0.1}
+            value={Math.min(currentTime, duration || 0)}
+            onChange={handleSeek}
+            disabled={!duration}
+            aria-label="Position de lecture"
+            className={scrubberClasses}
+          />
+          <span className="shrink-0 text-xs font-semibold text-journal-800 tabular-nums">
+            {formatTime(currentTime)}&nbsp;/&nbsp;{formatTime(duration)}
+          </span>
           {/* Re-recording replaces the take; there is deliberately no delete action. */}
-          <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={startRecording}
-              className="flex items-center gap-2 min-h-[44px] px-3 rounded-full
-                text-sm font-semibold text-journal-500 hover:text-journal-900
-                hover:bg-journal-100 active:scale-95 transition-all touch-manipulation"
-            >
-              <RotateCcw size={16} />
-              Réenregistrer
-            </button>
-            {languageRow}
-          </div>
-        </>
+          <button
+            type="button"
+            onClick={startRecording}
+            aria-label="Réenregistrer"
+            title="Réenregistrer"
+            className="shrink-0 flex items-center justify-center h-11 w-11 rounded-full
+              text-journal-500 hover:text-journal-900 hover:bg-journal-200
+              active:scale-95 transition-all touch-manipulation"
+          >
+            <RotateCcw size={16} />
+          </button>
+        </div>
       )}
-
-      {status === 'idle' && !audioValue && languageRow}
 
       {audioValue && (
         <audio
@@ -396,7 +340,7 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
       )}
 
       {errorMessage && (
-        <span className="text-xs text-journal-accent leading-snug">{errorMessage}</span>
+        <span className="text-xs text-journal-accent leading-snug px-1">{errorMessage}</span>
       )}
     </div>
   );

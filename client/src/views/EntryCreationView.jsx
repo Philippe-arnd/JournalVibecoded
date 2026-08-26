@@ -128,10 +128,10 @@ const RichTextEditor = forwardRef(({ value, onChange, placeholder, voiceSlot }, 
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex items-center gap-1 mb-2 border-b border-journal-100 pb-2">
+      <div className="flex flex-wrap items-center gap-1 mb-2 border-b border-journal-100 pb-2">
         <button
           onClick={() => exec('bold')}
-          className="p-1.5 text-journal-500 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
+          className="flex items-center justify-center min-h-[44px] min-w-[44px] text-journal-500 hover:text-journal-900 hover:bg-journal-50 rounded-lg transition-colors touch-manipulation"
           title="Bold"
         >
           <Bold size={18} />
@@ -139,28 +139,27 @@ const RichTextEditor = forwardRef(({ value, onChange, placeholder, voiceSlot }, 
         <div className="w-px bg-journal-100 mx-1" />
         <button
           onClick={() => exec('insertUnorderedList')}
-          className="p-1.5 text-journal-500 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
+          className="flex items-center justify-center min-h-[44px] min-w-[44px] text-journal-500 hover:text-journal-900 hover:bg-journal-50 rounded-lg transition-colors touch-manipulation"
           title="Bullet List"
         >
           <List size={18} />
         </button>
         <button
           onClick={() => exec('outdent')}
-          className="p-1.5 text-journal-500 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
+          className="flex items-center justify-center min-h-[44px] min-w-[44px] text-journal-500 hover:text-journal-900 hover:bg-journal-50 rounded-lg transition-colors touch-manipulation"
           title="Outdent"
         >
           <Outdent size={18} />
         </button>
         <button
           onClick={() => exec('indent')}
-          className="p-1.5 text-journal-500 hover:text-journal-900 hover:bg-journal-50 rounded transition-colors"
+          className="flex items-center justify-center min-h-[44px] min-w-[44px] text-journal-500 hover:text-journal-900 hover:bg-journal-50 rounded-lg transition-colors touch-manipulation"
           title="Indent"
         >
           <Indent size={18} />
         </button>
+        {voiceSlot}
       </div>
-
-      {voiceSlot && <div className="mb-3">{voiceSlot}</div>}
 
       <div
         ref={editorRef}
