@@ -1,24 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Mic, Square, Loader2, Trash2 } from 'lucide-react';
+import { transcribeAudio } from '../services/transcriptionService';
 
 // Recording is capped at 60s client-side to keep audio payloads small
-// (stored as encrypted base64 alongside the entry text, see entryService.js).
+// (stored as encrypted base64 alongside the entry text, see entryService.js)
+// and to bound the work handed to the transcription service.
 const MAX_RECORDING_SECONDS = 60;
 const AUDIO_MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
-// SpeechRecognition.stop() doesn't cut off immediately: the browser keeps processing
-// already-captured audio and can fire one last onresult before onend. Cap how long we
-// wait for that flush so the UI never hangs if onend never fires.
-const RECOGNITION_FLUSH_TIMEOUT_MS = 1500;
-
-const getSpeechRecognitionCtor = () =>
-  (typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition)) || null;
 
 const isRecordingSupported = () =>
   typeof window !== 'undefined' &&
   !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) &&
   typeof window.MediaRecorder !== 'undefined';
-
-const isTranscriptionSupported = () => !!getSpeechRecognitionCtor();
 
 function pickAudioMimeType() {
   if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return undefined;
@@ -35,32 +28,24 @@ function blobToBase64(blob) {
 }
 
 export default function VoiceInputButton({ audioValue, onAudioChange, onTranscript }) {
-  const [status, setStatus] = useState('idle'); // idle | recording | transcribing | processing
+  const [status, setStatus] = useState('idle'); // idle | recording | processing | transcribing
   const [elapsed, setElapsed] = useState(0);
   const [errorMessage, setErrorMessage] = useState(null);
 
   const mediaRecorderRef = useRef(null);
-  const recognitionRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
-  const transcriptRef = useRef('');
-  const transcriptionErrorRef = useRef(false);
   const timerRef = useRef(null);
+  // Guards the async tail of onstop: the component can be unmounted (card swiped
+  // away) while a transcription is still in flight.
+  const mountedRef = useRef(true);
 
   const supported = isRecordingSupported();
-  const transcriptionSupported = isTranscriptionSupported();
 
   const releaseResources = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
-    }
-    if (recognitionRef.current) {
-      recognitionRef.current.onresult = null;
-      recognitionRef.current.onerror = null;
-      recognitionRef.current.onend = null;
-      try { recognitionRef.current.stop(); } catch { /* already stopped */ }
-      recognitionRef.current = null;
     }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
@@ -68,27 +53,13 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
     }
   }, []);
 
-  useEffect(() => releaseResources, [releaseResources]);
-
-  // Stops the recognizer and waits for its final onresult/onend to fire before
-  // resolving, so the last spoken segment isn't lost when handlers are detached.
-  const flushRecognition = useCallback(() => {
-    const recognition = recognitionRef.current;
-    if (!recognition) return Promise.resolve();
-    return new Promise((resolve) => {
-      let settled = false;
-      let timeoutId;
-      const finish = () => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeoutId);
-        resolve();
-      };
-      timeoutId = setTimeout(finish, RECOGNITION_FLUSH_TIMEOUT_MS);
-      recognition.onend = finish;
-      try { recognition.stop(); } catch { finish(); }
-    });
-  }, []);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      releaseResources();
+    };
+  }, [releaseResources]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -102,8 +73,6 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       chunksRef.current = [];
-      transcriptRef.current = '';
-      transcriptionErrorRef.current = false;
 
       const mimeType = pickAudioMimeType();
       const recorder = new MediaRecorder(stream, {
@@ -118,59 +87,43 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
 
       recorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
-        if (recognitionRef.current) {
-          setStatus('transcribing');
-          await flushRecognition();
-        }
         releaseResources();
+
+        // Persist the audio before transcribing: the recording is the part the user
+        // can't reproduce, and transcription is the step that may fail or time out.
         setStatus('processing');
         try {
-          const base64 = await blobToBase64(blob);
-          onAudioChange(base64);
-          const transcript = transcriptRef.current.trim();
-          if (transcript) {
-            onTranscript(transcript);
-          } else if (transcriptionErrorRef.current) {
-            setErrorMessage("La transcription a échoué, l'audio a été conservé.");
-          }
+          onAudioChange(await blobToBase64(blob));
         } catch {
-          setErrorMessage("Impossible d'enregistrer l'audio.");
+          if (mountedRef.current) {
+            setErrorMessage("Impossible d'enregistrer l'audio.");
+            setStatus('idle');
+            setElapsed(0);
+          }
+          return;
+        }
+
+        setStatus('transcribing');
+        try {
+          const text = await transcribeAudio(blob);
+          if (!mountedRef.current) return;
+          if (text) {
+            onTranscript(text);
+          } else {
+            setErrorMessage("Aucune parole n'a été reconnue, l'audio a été conservé.");
+          }
+        } catch (error) {
+          if (mountedRef.current) setErrorMessage(error.message);
         } finally {
-          setStatus('idle');
-          setElapsed(0);
+          if (mountedRef.current) {
+            setStatus('idle');
+            setElapsed(0);
+          }
         }
       };
 
       recorder.start();
       setStatus('recording');
-
-      const SpeechRecognitionCtor = getSpeechRecognitionCtor();
-      if (SpeechRecognitionCtor) {
-        const recognition = new SpeechRecognitionCtor();
-        recognition.continuous = true;
-        recognition.interimResults = false;
-        recognition.lang = navigator.language || 'en-US';
-        recognition.onresult = (event) => {
-          let finalText = '';
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            if (event.results[i].isFinal) {
-              finalText += event.results[i][0].transcript;
-            }
-          }
-          if (finalText) {
-            transcriptRef.current = `${transcriptRef.current} ${finalText}`.trim();
-          }
-        };
-        // Live transcription is best-effort; the audio recording is kept even if it fails.
-        // 'no-speech'/'aborted' are expected (silence, or our own stop()) and not real failures.
-        recognition.onerror = (event) => {
-          if (event?.error !== 'no-speech' && event?.error !== 'aborted') {
-            transcriptionErrorRef.current = true;
-          }
-        };
-        recognitionRef.current = recognition;
-        try { recognition.start(); } catch { /* already running */ }
-      }
 
       let seconds = 0;
       timerRef.current = setInterval(() => {
@@ -211,14 +164,14 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
           <span className="text-xs tabular-nums">{MAX_RECORDING_SECONDS - elapsed}s</span>
         </button>
       )}
+      {status === 'processing' && (
+        <Loader2 size={18} className="animate-spin text-journal-400" title="Enregistrement de l'audio" />
+      )}
       {status === 'transcribing' && (
         <span className="flex items-center gap-1.5 text-journal-400" title="Transcription en cours">
           <Loader2 size={18} className="animate-spin" />
           <span className="text-xs">Transcription…</span>
         </span>
-      )}
-      {status === 'processing' && (
-        <Loader2 size={18} className="animate-spin text-journal-400" title="Enregistrement de l'audio" />
       )}
       {audioValue && status === 'idle' && (
         <>
@@ -232,11 +185,6 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
             <Trash2 size={16} />
           </button>
         </>
-      )}
-      {status === 'idle' && !transcriptionSupported && (
-        <span className="text-xs text-journal-300 italic">
-          Transcription indisponible sur ce navigateur, l'audio reste enregistré.
-        </span>
       )}
       {errorMessage && (
         <span className="text-xs text-journal-accent">{errorMessage}</span>

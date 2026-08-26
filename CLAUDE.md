@@ -142,6 +142,9 @@ docker-compose logs -f           # View logs from all services
 - `saveEntry(entryData)` - Upsert entry (creates or updates based on entry_date)
 - `deleteEntry(id)` - Delete entry by ID
 
+**transcriptionService.js**
+- `transcribeAudio(blob)` - POST a raw recording to `/api/transcribe`, returns the text
+
 ### Server API Endpoints
 
 **Authentication** (Better Auth)
@@ -154,6 +157,34 @@ docker-compose logs -f           # View logs from all services
 - `GET /api/entries/:id` - Get specific entry
 - `POST /api/entries` - Create or update entry (upsert)
 - `DELETE /api/entries/:id` - Delete entry
+
+**Transcription** (auth-protected)
+- `POST /api/transcribe` - Raw audio body (`audio/*`), returns `{ text }`
+
+### Voice Notes & Transcription
+
+Recording uses `MediaRecorder` (60s cap, 32kbps opus), and transcription runs on a
+self-hosted whisper container — **not** the browser's Web Speech API, which is absent
+on Firefox and unreliable on Chrome Android (see #209).
+
+Flow: `VoiceInputButton` records → `POST /api/transcribe` → the Express route forwards
+the audio to the `whisper` container over the internal Docker network → text is inserted
+into the editor with a typewriter effect → audio and text are encrypted together on save,
+through the existing `saveEntry()` path.
+
+- The whisper container has **no auth of its own** and is never exposed publicly. The
+  authenticated `/api/transcribe` route is the only way in, and it rate-limits per user
+  because transcription is CPU-bound.
+- Audio reaches the server unencrypted, which does not weaken the existing model:
+  `VITE_ENCRYPTION_KEY` is a build-time constant on the same infrastructure, so the
+  server could already decrypt stored audio. Nothing leaves Phil's infra.
+- The model (`WHISPER_MODEL`, default `small`) is a speed/quality trade-off on a CPU-only
+  host. On 4 vCPU, `small` runs ~3x realtime: a 20s note transcribes in ~7s, a full 60s
+  note in ~20s. `base` is ~2x faster with noticeably more errors in French; `medium` is
+  ~3x slower and tight on RAM.
+- First boot downloads the model (~500MB) into the `whisper_models` volume, hence the
+  600s `start_period`. The API deliberately does **not** `depends_on` whisper: it boots
+  immediately and `/api/transcribe` returns 502 until the model is ready.
 
 ## Development Guidelines
 
@@ -339,6 +370,9 @@ DATABASE_ADMIN_URL=postgresql://postgres:password@localhost:5432/journal
 BETTER_AUTH_SECRET=your-secret-key-min-32-chars
 ANTHROPIC_API_KEY=sk-...
 RESEND_API_KEY=re_...
+WHISPER_URL=http://whisper:9000
+WHISPER_MODEL=small
+WHISPER_LANGUAGE=fr
 ```
 
 **Client `.env.local`** (for direct client testing):
