@@ -1,7 +1,7 @@
-import { Plus, ChevronDown, Trash2, Edit2, Calendar as CalendarIcon, List, Settings, LogOut, Lock, X, ChevronLeft, ChevronRight, Sparkles, Loader2, Snowflake, Mic } from 'lucide-react';
+import { Plus, ChevronDown, Trash2, Edit2, Calendar as CalendarIcon, List, Settings, LogOut, Lock, X, ChevronLeft, ChevronRight, Sparkles, Loader2, Snowflake, Mic, Play, Square } from 'lucide-react';
 import { TRANSCRIPTION_LANGUAGES, getTranscriptionLanguage, setTranscriptionLanguage } from '../utils/transcriptionLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Flame } from 'lucide-react';
 import DOMPurify from 'dompurify';
@@ -480,10 +480,10 @@ function TimelineCard({ entry, onEdit, onDelete }) {
               className="border-t border-journal-50"
             >
               <div className="p-6 space-y-8">
-                <SectionDetail title="Professional" content={entry.professional_recap} />
-                <SectionDetail title="Personal" content={entry.personal_recap} />
-                <SectionDetail title="Learning" content={entry.learning_reflections} />
-                <SectionDetail title="Gratitude" content={entry.gratitude} />
+                <SectionDetail title="Professional" content={entry.professional_recap} audioSrc={entry.professional_recap_audio} />
+                <SectionDetail title="Personal" content={entry.personal_recap} audioSrc={entry.personal_recap_audio} />
+                <SectionDetail title="Learning" content={entry.learning_reflections} audioSrc={entry.learning_reflections_audio} />
+                <SectionDetail title="Gratitude" content={entry.gratitude} audioSrc={entry.gratitude_audio} />
                 
                 <div className="flex justify-end gap-2 pt-6 border-t border-journal-50">
                   <button
@@ -744,15 +744,75 @@ function SettingsModal({ onClose, onSignOut }) {
   );
 }
 
-const SectionDetail = ({ title, content }) => (
+const SectionDetail = ({ title, content, audioSrc }) => (
   <div>
-    <h4 className="text-[10px] font-bold text-journal-400 uppercase mb-1.5 tracking-widest">{title}</h4>
-    <div 
-      className="text-journal-700 leading-relaxed font-normal text-base [&_ul]:list-disc [&_ul_ul]:list-[circle] [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5" 
-      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content || "No entry recorded.") }} 
+    <h4 className="text-[10px] font-bold text-journal-400 uppercase mb-1.5 tracking-widest flex items-center gap-1.5">
+      {title}
+      <SectionAudioButton src={audioSrc} />
+    </h4>
+    <div
+      className="text-journal-700 leading-relaxed font-normal text-base [&_ul]:list-disc [&_ul_ul]:list-[circle] [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content || "No entry recorded.") }}
     />
   </div>
 );
+
+// Tracks the single audio element currently playing across all inline replay
+// buttons, so starting one playback stops any other that's already going.
+let activePlaybackAudio = null;
+
+// Discreet inline replay for a section's recorded voice note. Two states only
+// (play / stop, no scrubber) — this is a "listen back" affordance, not a player.
+function SectionAudioButton({ src }) {
+  const audioRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => () => {
+    if (activePlaybackAudio === audioRef.current) activePlaybackAudio = null;
+  }, []);
+
+  if (!src) return null;
+
+  const toggle = (e) => {
+    e.stopPropagation();
+    const el = audioRef.current;
+    if (!el) return;
+    if (isPlaying) {
+      el.pause();
+      el.currentTime = 0;
+      return;
+    }
+    if (activePlaybackAudio && activePlaybackAudio !== el) {
+      activePlaybackAudio.pause();
+      activePlaybackAudio.currentTime = 0;
+    }
+    activePlaybackAudio = el;
+    el.play().catch(() => {});
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={isPlaying ? "Arrêter l'écoute" : "Écouter l'enregistrement"}
+      title={isPlaying ? "Arrêter" : "Écouter"}
+      className="inline-flex items-center justify-center w-4 h-4 rounded-full text-journal-300 hover:text-journal-600 transition-colors normal-case tracking-normal"
+    >
+      {isPlaying
+        ? <Square size={9} className="fill-current" />
+        : <Play size={9} className="fill-current translate-x-[0.5px]" />}
+      <audio
+        ref={audioRef}
+        src={src}
+        preload="none"
+        className="hidden"
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => setIsPlaying(false)}
+      />
+    </button>
+  );
+}
 
 function DateSelectionModal({ onClose, onSelect }) {
   const yesterday = new Date();
