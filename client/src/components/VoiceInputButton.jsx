@@ -198,8 +198,10 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
 
   // Every interactive element is sized for a thumb (>=44px) rather than a cursor:
   // on mobile the mic is the primary way into a card, not a secondary affordance.
-  // A 4px native track is fine with a mouse and unusable with a thumb, so the input
-  // keeps a tall touch area while the visible track stays thin.
+  // The round controls show a 36px disc inside a 44px button: the smaller disc leaves
+  // breathing room inside the 48px pill while the hit area stays thumb-sized.
+  // Same idea for the scrubber below — a 4px native track is fine with a mouse and
+  // unusable with a thumb, so the input keeps a tall touch area over a thin track.
   const scrubberClasses = `flex-1 min-w-0 h-11 bg-transparent appearance-none cursor-pointer
     touch-manipulation disabled:cursor-not-allowed
     [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:rounded-full
@@ -262,11 +264,14 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
             type="button"
             onClick={stopRecording}
             aria-label="Arrêter l'enregistrement"
-            className="shrink-0 flex items-center justify-center h-11 w-11 rounded-full
-              bg-journal-accent text-white hover:opacity-90 active:scale-95 transition-all
+            className="group shrink-0 flex items-center justify-center h-11 w-11
               touch-manipulation"
           >
-            <Square size={15} className="fill-current" />
+            <span className="flex items-center justify-center h-9 w-9 rounded-full
+              bg-journal-accent text-white group-hover:opacity-90 group-active:scale-95
+              transition-all">
+              <Square size={15} className="fill-current" />
+            </span>
           </button>
         </div>
       )}
@@ -288,13 +293,16 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
             type="button"
             onClick={togglePlayback}
             aria-label={isPlaying ? 'Mettre en pause' : 'Écouter'}
-            className="shrink-0 flex items-center justify-center h-11 w-11 rounded-full
-              bg-journal-500 text-white hover:bg-journal-800 active:scale-95
-              transition-all touch-manipulation"
+            className="group shrink-0 flex items-center justify-center h-11 w-11
+              touch-manipulation"
           >
-            {isPlaying
-              ? <Pause size={15} className="fill-current" />
-              : <Play size={15} className="fill-current translate-x-[1px]" />}
+            <span className="flex items-center justify-center h-9 w-9 rounded-full
+              bg-journal-500 text-white group-hover:bg-journal-800 group-active:scale-95
+              transition-all">
+              {isPlaying
+                ? <Pause size={15} className="fill-current" />
+                : <Play size={15} className="fill-current translate-x-[1px]" />}
+            </span>
           </button>
           <input
             type="range"
@@ -316,11 +324,14 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
             onClick={startRecording}
             aria-label="Réenregistrer"
             title="Réenregistrer"
-            className="shrink-0 flex items-center justify-center h-11 w-11 rounded-full
-              text-journal-500 hover:text-journal-900 hover:bg-journal-200
-              active:scale-95 transition-all touch-manipulation"
+            className="group shrink-0 flex items-center justify-center h-11 w-11
+              touch-manipulation"
           >
-            <RotateCcw size={16} />
+            <span className="flex items-center justify-center h-9 w-9 rounded-full
+              text-journal-500 group-hover:text-journal-900 group-hover:bg-journal-200
+              group-active:scale-95 transition-all">
+              <RotateCcw size={16} />
+            </span>
           </button>
         </div>
       )}
