@@ -3,6 +3,7 @@ import cors from "cors";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
 import entriesRouter from "./routes/entries";
+import transcribeRouter from "./routes/transcribe";
 
 const app = express();
 
@@ -37,6 +38,9 @@ app.get("/health", (req, res) => {
 app.all(/^\/api\/auth\/.*/, toNodeHandler(auth));
 
 app.use("/api/entries", entriesRouter);
+// Raw audio body, parsed inside the router — express.json above only claims
+// application/json, so the recording passes through untouched.
+app.use("/api/transcribe", transcribeRouter);
 
 app.all(/.*/, (req, res) => {
     res.status(404).send("Not Found");

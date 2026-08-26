@@ -19,4 +19,14 @@ describe('Auth Protection', () => {
         const response = await request(app).get('/api/entries/today');
         expect(response.status).toBe(401);
     });
+
+    // The whisper container has no auth of its own and is CPU-bound, so this route
+    // is the only thing standing between it and an unauthenticated caller.
+    it('should return 401 Unauthorized for /api/transcribe without a session', async () => {
+        const response = await request(app)
+            .post('/api/transcribe')
+            .set('Content-Type', 'audio/webm')
+            .send(Buffer.from('audio'));
+        expect(response.status).toBe(401);
+    });
 });
