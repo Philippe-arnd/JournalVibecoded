@@ -61,22 +61,27 @@ const RichTextEditor = forwardRef(({ value, onChange, placeholder, toolbarExtra 
     editorRef.current?.focus();
   };
 
-  // Inserts transcribed text at the caret (or the end, if the editor isn't focused)
-  // so voice input can be appended without clobbering what's already typed.
+  // Returns the current caret range inside the editor, or a collapsed range at the
+  // end of its content if the editor isn't focused/selected.
+  const getInsertionRange = (el) => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0 && el.contains(selection.anchorNode)) {
+      return { selection, range: selection.getRangeAt(0) };
+    }
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    return { selection, range };
+  };
+
   useImperativeHandle(ref, () => ({
+    // Inserts transcribed text at the caret (or the end, if the editor isn't focused)
+    // so voice input can be appended without clobbering what's already typed.
     insertText(text) {
       const el = editorRef.current;
       if (!el) return;
       el.focus();
-      const selection = window.getSelection();
-      let range;
-      if (selection && selection.rangeCount > 0 && el.contains(selection.anchorNode)) {
-        range = selection.getRangeAt(0);
-      } else {
-        range = document.createRange();
-        range.selectNodeContents(el);
-        range.collapse(false);
-      }
+      const { selection, range } = getInsertionRange(el);
       range.deleteContents();
       const needsLeadingSpace = !!el.textContent && !/\s$/.test(el.textContent);
       const textNode = document.createTextNode(`${needsLeadingSpace ? ' ' : ''}${text}`);
@@ -86,6 +91,38 @@ const RichTextEditor = forwardRef(({ value, onChange, placeholder, toolbarExtra 
       selection?.removeAllRanges();
       selection?.addRange(range);
       handleInput();
+    },
+    // Same insertion point as insertText, but reveals the text progressively
+    // (typewriter effect) instead of all at once — used for voice transcripts.
+    insertTypedText(text) {
+      const el = editorRef.current;
+      if (!el || !text) return;
+      el.focus();
+      const { selection, range } = getInsertionRange(el);
+      range.deleteContents();
+      const needsLeadingSpace = !!el.textContent && !/\s$/.test(el.textContent);
+      const prefix = needsLeadingSpace ? ' ' : '';
+      const textNode = document.createTextNode(prefix);
+      range.insertNode(textNode);
+
+      const CHARS_PER_TICK = 3;
+      let index = 0;
+      const revealNext = () => {
+        if (!editorRef.current || !editorRef.current.contains(textNode)) return;
+        index = Math.min(index + CHARS_PER_TICK, text.length);
+        textNode.textContent = prefix + text.slice(0, index);
+        handleInput();
+        if (index < text.length) {
+          requestAnimationFrame(revealNext);
+        } else {
+          const finalRange = document.createRange();
+          finalRange.setStartAfter(textNode);
+          finalRange.collapse(true);
+          selection?.removeAllRanges();
+          selection?.addRange(finalRange);
+        }
+      };
+      revealNext();
     }
   }));
 
@@ -364,7 +401,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
                       const { audioField } = SECTIONS[currentSectionIndex];
                       setEntryData(prev => ({ ...prev, [audioField]: audio }));
                     }}
-                    onTranscript={(text) => editorRef.current?.insertText(text)}
+                    onTranscript={(text) => editorRef.current?.insertTypedText(text)}
                   />
                 }
               />
