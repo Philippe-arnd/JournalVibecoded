@@ -50,7 +50,7 @@ services:
   # talks to it, over the internal network. First boot downloads the model (~500MB
   # for `small`), hence the long start_period.
   whisper:
-    image: onerahmet/openai-whisper-asr-webservice:v1.9.1
+    image: onerahmet/openai-whisper-asr-webservice:v1.10.0
     restart: always
     environment:
       - ASR_ENGINE=faster_whisper
