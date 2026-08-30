@@ -1,5 +1,5 @@
 # Build stage
-FROM node:24.19.0-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS builder
+FROM node:24.20.0-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
@@ -8,7 +8,7 @@ RUN npm run build
 RUN npm run db:generate
 
 # Production stage
-FROM node:24.19.0-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43
+FROM node:24.20.0-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf
 RUN apk add --no-cache curl
 WORKDIR /app
 COPY package*.json ./
