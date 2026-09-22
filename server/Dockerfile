@@ -26,5 +26,6 @@ COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 
 EXPOSE 3000
-# Run migrations and apply RLS before starting the server
-CMD ["sh", "-c", "./node_modules/.bin/drizzle-kit push && ./node_modules/.bin/tsx src/scripts/apply-rls-prod.ts && node dist/server.js"]
+# Run migrations, backfill account.issuer (better-auth 1.7 sign-in requirement,
+# see src/scripts/backfill-account-issuer.ts), apply RLS, then start the server
+CMD ["sh", "-c", "./node_modules/.bin/drizzle-kit push && ./node_modules/.bin/tsx src/scripts/backfill-account-issuer.ts && ./node_modules/.bin/tsx src/scripts/apply-rls-prod.ts && node dist/server.js"]

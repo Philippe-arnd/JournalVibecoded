@@ -39,9 +39,12 @@ export const AuthProvider = ({ children }) => {
     },
     signOut: () => authClient.signOut(),
     resetPassword: async (email) => {
-        return authClient.forgetPassword({
+        // better-auth 1.7 renamed this endpoint from /forget-password to
+        // /request-password-reset (forgetPassword() 404s against the current
+        // server).
+        return authClient.requestPasswordReset({
             email,
-            redirectTo: "/update-password" 
+            redirectTo: "/update-password"
         });
     },
     updateUserPassword: async (newPassword) => {
