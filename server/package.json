@@ -10,6 +10,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:rls": "tsx src/scripts/apply-rls-prod.ts",
+    "db:backfill-account-issuer": "tsx src/scripts/backfill-account-issuer.ts",
     "seed:user": "tsx src/scripts/create-test-user.ts",
     "test:rls": "tsx src/scripts/test-rls.ts",
     "test": "vitest run"

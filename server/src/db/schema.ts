@@ -25,6 +25,13 @@ export const account = pgTable("account", {
         id: text("id").primaryKey(),
         accountId: text("account_id").notNull(),
         providerId: text("provider_id").notNull(),
+        // Added for better-auth 1.7 (account identity scoping): sign-in now
+        // matches accounts on (providerId, issuer, accountId), not providerId
+        // alone. Nullable here on purpose — see backfill-account-issuer.ts,
+        // which populates existing rows on every boot before the server
+        // starts accepting traffic; a NOT NULL push against a live table
+        // would otherwise prompt for a default and hang the deploy.
+        issuer: text("issuer"),
         userId: text("user_id").notNull().references(() => user.id),
         accessToken: text("access_token"),
         refreshToken: text("refresh_token"),
