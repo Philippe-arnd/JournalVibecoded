@@ -37,6 +37,12 @@ export const account = pgTable("account", {
         refreshToken: text("refresh_token"),
         idToken: text("id_token"),
         expiresAt: timestamp("expires_at"),
+        // Required by better-auth >= 1.7.3, which validates the Drizzle schema
+        // at init and rejects auth requests on mismatch. Nullable so the boot
+        // `drizzle-kit push` adds them without prompting.
+        accessTokenExpiresAt: timestamp("access_token_expires_at"),
+        refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+        scope: text("scope"),
         password: text("password"),
         createdAt: timestamp("created_at").notNull(),
         updatedAt: timestamp("updated_at").notNull(),
