@@ -1,5 +1,5 @@
 # Build stage
-FROM node:24.22.2-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS builder
+FROM node:26.13.0-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
@@ -8,7 +8,7 @@ RUN npm run build
 RUN npm run db:generate
 
 # Production stage
-FROM node:24.22.2-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
+FROM node:26.13.0-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216
 # Pull Alpine security fixes (e.g. openssl) published after the pinned base
 # image digest; Renovate bumps the digest, this covers the gap in between.
 RUN apk upgrade --no-cache && apk add --no-cache curl
