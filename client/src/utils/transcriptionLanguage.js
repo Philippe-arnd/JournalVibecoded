@@ -34,3 +34,24 @@ export function setTranscriptionLanguage(code) {
     // Preference just won't persist; not worth surfacing.
   }
 }
+
+// Words whisper tends to mishear: acronyms, colleagues' names, project codenames.
+// Stored per device like the language, and read at record time for the same reason.
+const VOCABULARY_KEY = 'journal.transcription.vocabulary';
+export const MAX_VOCABULARY_CHARS = 400;
+
+export function getTranscriptionVocabulary() {
+  try {
+    return localStorage.getItem(VOCABULARY_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+export function setTranscriptionVocabulary(value) {
+  try {
+    localStorage.setItem(VOCABULARY_KEY, value.slice(0, MAX_VOCABULARY_CHARS));
+  } catch {
+    // Preference just won't persist.
+  }
+}

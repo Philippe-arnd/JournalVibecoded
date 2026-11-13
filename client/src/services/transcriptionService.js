@@ -10,13 +10,17 @@ const ERROR_BY_STATUS = {
   504: "La transcription a pris trop de temps. L'audio a été conservé.",
 };
 
-export async function transcribeAudio(blob, language) {
+export async function transcribeAudio(blob, language, vocabulary = '') {
   const query = language ? `?language=${encodeURIComponent(language)}` : '';
   const response = await fetch(`${VITE_API_URL}/api/transcribe${query}`, {
     method: 'POST',
     // Raw audio body rather than multipart: no base64 inflation, no extra
     // dependency server-side. The server reads the codec from this header.
-    headers: { 'Content-Type': blob.type || 'audio/webm' },
+    headers: {
+      'Content-Type': blob.type || 'audio/webm',
+      // Sent as a header, not a query param, so names stay out of proxy access logs.
+      ...(vocabulary.trim() ? { 'X-Transcription-Vocabulary': encodeURIComponent(vocabulary.trim()) } : {}),
+    },
     body: blob,
     credentials: 'include',
   });

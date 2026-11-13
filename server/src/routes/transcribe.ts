@@ -19,6 +19,25 @@ const SUPPORTED_LANGUAGES = new Set(["fr", "en", "it", "es", "de"]);
 // gets confused by code-switching, which is common when dictating technical notes.
 const AUTO_LANGUAGE = "auto";
 
+// Words Whisper tends to mishear (acronyms, colleagues' names). Sent in a header rather
+// than the query string so names don't end up in reverse-proxy access logs. Capped well
+// under Whisper's ~224-token prompt window, and stripped of control characters.
+export const VOCABULARY_HEADER = "x-transcription-vocabulary";
+const MAX_VOCABULARY_CHARS = 400;
+
+export function buildInitialPrompt(headerValue: string | undefined): string {
+    if (!headerValue) return "";
+    let decoded: string;
+    try {
+        decoded = decodeURIComponent(headerValue);
+    } catch {
+        return "";
+    }
+    // eslint-disable-next-line no-control-regex
+    const cleaned = decoded.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_VOCABULARY_CHARS);
+    return cleaned ? `Vocabulaire : ${cleaned}.` : "";
+}
+
 // The client caps recordings at 60s (~240KB of 32kbps opus). 5MB leaves room for
 // browsers that fall back to a bulkier codec without letting a bypassed client
 // queue an arbitrarily long job on a CPU-bound service.
@@ -98,6 +117,7 @@ router.post(
             return res.status(400).json({ error: "Unsupported language" });
         }
         const language = requested || WHISPER_LANGUAGE;
+        const initialPrompt = buildInitialPrompt(req.get(VOCABULARY_HEADER));
 
         try {
             const contentType = req.get("content-type") || "audio/webm";
@@ -105,7 +125,8 @@ router.post(
             form.append("audio_file", new Blob([req.body], { type: contentType }), "recording.webm");
 
             const url = `${WHISPER_URL}/asr?task=transcribe&output=json&vad_filter=true`
-                + (language === AUTO_LANGUAGE ? "" : `&language=${encodeURIComponent(language)}`);
+                + (language === AUTO_LANGUAGE ? "" : `&language=${encodeURIComponent(language)}`)
+                + (initialPrompt ? `&initial_prompt=${encodeURIComponent(initialPrompt)}` : "");
 
             const whisperRes = await fetch(url, {
                 method: "POST",
@@ -119,7 +140,9 @@ router.post(
             }
 
             const payload: any = await whisperRes.json();
-            return res.json({ text: stripHallucinatedTrailers(String(payload?.text || "")) });
+            const text = stripHallucinatedTrailers(String(payload?.text || ""));
+            // On near-silent audio Whisper can echo its own prompt back.
+            return res.json({ text: initialPrompt && text === initialPrompt ? "" : text });
         } catch (error: any) {
             const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
             console.error("Transcription failed:", error?.message);
