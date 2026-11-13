@@ -28,6 +28,36 @@ const MAX_AUDIO_BYTES = 5 * 1024 * 1024;
 // request open forever.
 const TRANSCRIPTION_TIMEOUT_MS = 120_000;
 
+// Whisper hallucinates stock phrases from its subtitle-heavy training data when it is
+// fed silence or noise, typically after the speaker stops but the recording runs on.
+// The VAD filter below removes most silence before decoding; this list is the safety
+// net for what slips through. Only matched at the very end of the text, so a sentence
+// that legitimately contains these words is left alone.
+const HALLUCINATED_TRAILERS: RegExp[] = [
+    /sous-titres?\s+(?:réalisés?|faits?)\s+(?:par|pour)\s+la\s+communauté\s+d['’]?\s*amara\.org/i,
+    /sous-titrage\s+(?:st['’]?\s*501|société\s+radio-canada|fr\s*2\d*)/i,
+    /merci\s+d['’]avoir\s+regardé\s+cette\s+vidéo/i,
+    /n['’]oubliez\s+pas\s+de\s+vous\s+abonner/i,
+    /subtitles?\s+(?:by|made\s+by)\s+the\s+amara\.org\s+community/i,
+    /thanks?\s+for\s+watching/i,
+];
+
+export function stripHallucinatedTrailers(text: string): string {
+    let result = text.trim();
+    let changed = true;
+    while (changed) {
+        changed = false;
+        for (const pattern of HALLUCINATED_TRAILERS) {
+            const match = new RegExp(`(?:^|\\s+|(?<=[.!?…]))${pattern.source}[\\s.!?…-]*$`, "i").exec(result);
+            if (match) {
+                result = result.slice(0, match.index).trim();
+                changed = true;
+            }
+        }
+    }
+    return result;
+}
+
 // Transcription is CPU-bound and shared by every user of the instance, so one
 // caller in a loop can starve the rest. Sliding window, in-memory: this is a
 // throttle against accidental hammering, not a security boundary.
@@ -74,7 +104,7 @@ router.post(
             const form = new FormData();
             form.append("audio_file", new Blob([req.body], { type: contentType }), "recording.webm");
 
-            const url = `${WHISPER_URL}/asr?task=transcribe&output=json`
+            const url = `${WHISPER_URL}/asr?task=transcribe&output=json&vad_filter=true`
                 + (language === AUTO_LANGUAGE ? "" : `&language=${encodeURIComponent(language)}`);
 
             const whisperRes = await fetch(url, {
@@ -89,7 +119,7 @@ router.post(
             }
 
             const payload: any = await whisperRes.json();
-            return res.json({ text: String(payload?.text || "").trim() });
+            return res.json({ text: stripHallucinatedTrailers(String(payload?.text || "")) });
         } catch (error: any) {
             const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
             console.error("Transcription failed:", error?.message);
