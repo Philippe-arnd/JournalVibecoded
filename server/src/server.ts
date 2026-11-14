@@ -19,7 +19,7 @@ app.use(cors({
     origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Transcription-Vocabulary"]
 }));
 
 // Raised from the Express default (100kb) to fit base64-encoded voice-note

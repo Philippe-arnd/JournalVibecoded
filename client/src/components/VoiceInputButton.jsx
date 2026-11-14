@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Mic, Square, Loader2, Play, Pause, RotateCcw } from 'lucide-react';
 import { transcribeAudio } from '../services/transcriptionService';
-import { getTranscriptionLanguage } from '../utils/transcriptionLanguage';
+import { getTranscriptionLanguage, getTranscriptionVocabulary } from '../utils/transcriptionLanguage';
 
 // Recording is capped at 60s client-side to keep audio payloads small
 // (stored as encrypted base64 alongside the entry text, see entryService.js)
@@ -126,7 +126,7 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
 
         setStatus('transcribing');
         try {
-          const text = await transcribeAudio(blob, getTranscriptionLanguage());
+          const text = await transcribeAudio(blob, getTranscriptionLanguage(), getTranscriptionVocabulary());
           if (!mountedRef.current) return;
           if (text) {
             onTranscript(text);

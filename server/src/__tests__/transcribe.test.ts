@@ -107,6 +107,58 @@ describe('POST /api/transcribe', () => {
         expect(response.body.text).toContain("merci d'avoir regardé cette vidéo");
     });
 
+    it('forwards the vocabulary header as an initial_prompt', async () => {
+        const fetchMock = mockWhisper(okWhisper('ok'));
+
+        await request(app)
+            .post('/api/transcribe')
+            .set('Content-Type', 'audio/webm')
+            .set('X-Transcription-Vocabulary', encodeURIComponent('CEA, Mayotte, Yann Lacroix'))
+            .send(AUDIO);
+
+        const url = new URL(fetchMock.mock.calls[0][0]);
+        expect(url.searchParams.get('initial_prompt')).toBe('Vocabulaire : CEA, Mayotte, Yann Lacroix.');
+    });
+
+    it('sends no initial_prompt without a vocabulary header', async () => {
+        const fetchMock = mockWhisper(okWhisper('ok'));
+
+        await request(app).post('/api/transcribe').set('Content-Type', 'audio/webm').send(AUDIO);
+
+        expect(fetchMock.mock.calls[0][0]).not.toContain('initial_prompt');
+    });
+
+    it('caps the vocabulary length and ignores malformed encoding', async () => {
+        const fetchMock = mockWhisper(okWhisper('ok'));
+
+        await request(app)
+            .post('/api/transcribe')
+            .set('Content-Type', 'audio/webm')
+            .set('X-Transcription-Vocabulary', encodeURIComponent('a'.repeat(5000)))
+            .send(AUDIO);
+        const long = new URL(fetchMock.mock.calls[0][0]).searchParams.get('initial_prompt')!;
+        expect(long.length).toBeLessThan(430);
+
+        await request(app)
+            .post('/api/transcribe')
+            .set('Content-Type', 'audio/webm')
+            .set('X-Transcription-Vocabulary', '%E0%A4%A')
+            .send(AUDIO);
+        expect(fetchMock.mock.calls[1][0]).not.toContain('initial_prompt');
+    });
+
+    it('drops a transcript that is just the echoed vocabulary prompt', async () => {
+        mockWhisper(okWhisper('Vocabulaire : CEA, Mayotte.'));
+
+        const response = await request(app)
+            .post('/api/transcribe')
+            .set('Content-Type', 'audio/webm')
+            .set('X-Transcription-Vocabulary', encodeURIComponent('CEA, Mayotte'))
+            .send(AUDIO);
+
+        expect(response.body).toEqual({ text: '' });
+    });
+
     it('rejects an empty body', async () => {
         const fetchMock = mockWhisper(okWhisper('ok'));
 

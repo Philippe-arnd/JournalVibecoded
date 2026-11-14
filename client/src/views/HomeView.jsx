@@ -1,5 +1,5 @@
 import { Plus, ChevronDown, Trash2, Edit2, Calendar as CalendarIcon, List, Settings, LogOut, Lock, X, ChevronLeft, ChevronRight, Sparkles, Loader2, Snowflake, Mic, Play, Square } from 'lucide-react';
-import { TRANSCRIPTION_LANGUAGES, getTranscriptionLanguage, setTranscriptionLanguage } from '../utils/transcriptionLanguage';
+import { TRANSCRIPTION_LANGUAGES, MAX_VOCABULARY_CHARS, getTranscriptionLanguage, setTranscriptionLanguage, getTranscriptionVocabulary, setTranscriptionVocabulary } from '../utils/transcriptionLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -518,6 +518,7 @@ function SettingsModal({ onClose, onSignOut }) {
   const { changePassword } = useAuth();
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [transcriptionLanguage, setTranscriptionLanguageState] = useState(getTranscriptionLanguage);
+  const [transcriptionVocabulary, setTranscriptionVocabularyState] = useState(getTranscriptionVocabulary);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -712,6 +713,27 @@ function SettingsModal({ onClose, onSignOut }) {
                 <p className="mt-2 text-xs text-journal-500 leading-relaxed">
                   Automatic detection reads only the first 30 seconds and gets confused when
                   you mix languages, so pick one if you can.
+                </p>
+
+                <label htmlFor="transcription-vocabulary" className="block text-sm text-journal-900 mt-5 mb-2">
+                  Custom vocabulary
+                </label>
+                <textarea
+                  id="transcription-vocabulary"
+                  value={transcriptionVocabulary}
+                  maxLength={MAX_VOCABULARY_CHARS}
+                  rows={3}
+                  placeholder="CEA, Mayotte, Yann Lacroix"
+                  onChange={(e) => {
+                    setTranscriptionVocabularyState(e.target.value);
+                    setTranscriptionVocabulary(e.target.value);
+                  }}
+                  className="w-full bg-journal-50 text-journal-900 p-3 rounded-lg text-base resize-none
+                    focus:outline-none focus:ring-2 focus:ring-journal-500/40"
+                />
+                <p className="mt-2 text-xs text-journal-500 leading-relaxed">
+                  Acronyms and names the transcription often gets wrong, separated by commas.
+                  Saved on this device only.
                 </p>
               </div>
 

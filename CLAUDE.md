@@ -200,6 +200,12 @@ through the existing `saveEntry()` path.
   stops. Two layers: `vad_filter=true` on the `/asr` call drops silence before decoding,
   and `stripHallucinatedTrailers()` in the route removes known phrases from the *end* of
   the text only. Add new phrases to `HALLUCINATED_TRAILERS` as they show up.
+- Custom vocabulary (acronyms, names) lives next to the language in Settings, in
+  `localStorage` (`getTranscriptionVocabulary()`), and travels in the
+  `X-Transcription-Vocabulary` header (URL-encoded) — a header rather than a query param so
+  colleagues' names don't land in proxy access logs. The route turns it into whisper's
+  `initial_prompt` (`Vocabulaire : …`), capped at 400 chars, and drops a transcript that is
+  only the echoed prompt. The header must stay in the CORS `allowedHeaders`.
 - The model (`WHISPER_MODEL`, default `small`) is a speed/quality trade-off on a CPU-only
   host. On 4 vCPU, `small` runs ~3x realtime: a 20s note transcribes in ~7s, a full 60s
   note in ~20s. `base` is ~2x faster with noticeably more errors in French; `medium` is
