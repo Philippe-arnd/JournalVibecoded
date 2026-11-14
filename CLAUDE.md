@@ -195,6 +195,11 @@ through the existing `saveEntry()` path.
   replaces the take; there is deliberately no delete action.
 - Touch targets are 44px minimum throughout, and the language `<select>` is 16px: Safari
   iOS auto-zooms the page when a smaller form control takes focus.
+- Whisper hallucinates stock subtitle credits ("Sous-titres réalisés par la communauté
+  d'Amara.org") on silence or noise, usually when the recording runs on after the speaker
+  stops. Two layers: `vad_filter=true` on the `/asr` call drops silence before decoding,
+  and `stripHallucinatedTrailers()` in the route removes known phrases from the *end* of
+  the text only. Add new phrases to `HALLUCINATED_TRAILERS` as they show up.
 - The model (`WHISPER_MODEL`, default `small`) is a speed/quality trade-off on a CPU-only
   host. On 4 vCPU, `small` runs ~3x realtime: a 20s note transcribes in ~7s, a full 60s
   note in ~20s. `base` is ~2x faster with noticeably more errors in French; `medium` is

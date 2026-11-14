@@ -66,6 +66,47 @@ describe('POST /api/transcribe', () => {
         expect(init.body.get('audio_file')).toBeInstanceOf(Blob);
     });
 
+    it('enables the VAD filter so trailing silence never reaches the decoder', async () => {
+        const fetchMock = mockWhisper(okWhisper('ok'));
+
+        await request(app).post('/api/transcribe').set('Content-Type', 'audio/webm').send(AUDIO);
+
+        expect(fetchMock.mock.calls[0][0]).toContain('vad_filter=true');
+    });
+
+    it('strips a hallucinated Amara.org subtitle credit from the end of the text', async () => {
+        mockWhisper(okWhisper("Journée à Lyon, GO NO GO l'après-midi. Sous-titres réalisés par la communauté d'Amara.org"));
+
+        const response = await request(app)
+            .post('/api/transcribe')
+            .set('Content-Type', 'audio/webm')
+            .send(AUDIO);
+
+        expect(response.body).toEqual({ text: "Journée à Lyon, GO NO GO l'après-midi." });
+    });
+
+    it('returns an empty string when the whole transcription is a hallucination', async () => {
+        mockWhisper(okWhisper("Sous-titres réalisés par la communauté d'Amara.org"));
+
+        const response = await request(app)
+            .post('/api/transcribe')
+            .set('Content-Type', 'audio/webm')
+            .send(AUDIO);
+
+        expect(response.body).toEqual({ text: '' });
+    });
+
+    it('keeps a stock phrase that appears mid-sentence', async () => {
+        mockWhisper(okWhisper("J'ai dit merci d'avoir regardé cette vidéo à Yann, puis on a déjeuné."));
+
+        const response = await request(app)
+            .post('/api/transcribe')
+            .set('Content-Type', 'audio/webm')
+            .send(AUDIO);
+
+        expect(response.body.text).toContain("merci d'avoir regardé cette vidéo");
+    });
+
     it('rejects an empty body', async () => {
         const fetchMock = mockWhisper(okWhisper('ok'));
 
