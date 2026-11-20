@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { authClient } from '../lib/auth';
+import { identifyUser, clearUser } from '../observability';
 
 const AuthContext = createContext({});
 
@@ -22,6 +23,11 @@ export const AuthProvider = ({ children }) => {
          setPasswordRecoveryMode(true);
      }
   }, []);
+
+  useEffect(() => {
+    if (user) identifyUser(user);
+    else if (!isPending) clearUser();
+  }, [user, isPending]);
 
   const value = {
     signUp: async (data) => {

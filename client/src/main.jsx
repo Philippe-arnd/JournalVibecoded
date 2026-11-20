@@ -4,6 +4,9 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import './index.css'
 import { AuthProvider } from './contexts/AuthContext'
+import { initObservability } from './observability'
+
+initObservability()
 
 // Register service worker
 if ('serviceWorker' in navigator) {
