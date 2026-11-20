@@ -4,6 +4,7 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
 import entriesRouter from "./routes/entries";
 import transcribeRouter from "./routes/transcribe";
+import { createO2Proxy } from "./o2-proxy";
 
 const app = express();
 
@@ -21,6 +22,9 @@ app.use(cors({
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie", "traceparent", "tracestate", "baggage"]
 }));
+
+// OpenObserve RUM relay: must run before express.json (it needs the raw body)
+app.use("/api/o2-proxy", createO2Proxy());
 
 // Raised from the Express default (100kb) to fit base64-encoded voice-note
 // recordings (up to 4 sections x ~2MB of encrypted audio, see routes/entries.ts).
