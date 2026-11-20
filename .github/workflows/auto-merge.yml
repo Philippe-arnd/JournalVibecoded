@@ -36,7 +36,7 @@ jobs:
         Build & Test Docker Images / 🐳 Build & Validate Docker Image
       merge-method: squash
       base-branch: main
-      block-label: major-update
+      block-label: ''
       triggering-conclusion: ${{ github.event.workflow_run.conclusion }}
       triggering-branch: ${{ github.event.workflow_run.head_branch }}
       file-issue-on-failure: true
