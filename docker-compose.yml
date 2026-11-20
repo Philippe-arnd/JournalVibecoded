@@ -84,6 +84,9 @@ services:
       args:
         - VITE_API_URL=${VITE_API_URL}
         - VITE_ENCRYPTION_KEY=${VITE_ENCRYPTION_KEY}
+        - VITE_OO_RUM_TOKEN=${VITE_OO_RUM_TOKEN:-}
+        - VITE_OO_APP_ID=${VITE_OO_APP_ID:-}
+        - VITE_OO_SERVICE_NAME=${VITE_OO_SERVICE_NAME:-}
     restart: always
     depends_on:
       server:
