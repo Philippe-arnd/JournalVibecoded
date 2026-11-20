@@ -25,15 +25,15 @@ jobs:
     uses: Philippe-arnd/reusable-workflow-vibecoded/.github/workflows/reusable-auto-merge.yml@main
     with:
       required-checks: |
-        ✅ Quick Checks
-        🧪 Vitest Tests
-        🔒 RLS Tests
-        🔑 Secret Detection
-        🛡️ Security Scan
-        🔎 Review Dependencies for Vulnerabilities
+        validation / ✅ Quick Checks
+        validation / 🧪 Vitest Tests
+        validation / 🔒 RLS Tests
+        security-performance / 🔑 Secret Detection
+        security-performance / 🛡️ Security Scan
+        dependency-review / 🔎 Review Dependencies for Vulnerabilities
       conditional-checks: |
-        📦 Bundle Size
-        Build & Test Docker Images
+        security-performance / 📦 Bundle Size
+        Build & Test Docker Images / 🐳 Build & Validate Docker Image
       merge-method: squash
       base-branch: main
       block-label: major-update
