@@ -27,6 +27,11 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Add custom nginx config if needed for SPA routing
 RUN echo "server { \
     listen 80; \
+    location /assets/ { \
+        root /usr/share/nginx/html; \
+        add_header Access-Control-Allow-Origin 'https://openobserve-mntizcveu9veqqliv9ol6azr.philapps.com' always; \
+        add_header Vary Origin always; \
+    } \
     location / { \
         root /usr/share/nginx/html; \
         index index.html; \
