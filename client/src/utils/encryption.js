@@ -7,8 +7,21 @@ if (!ENCRYPTION_KEY) {
   console.warn('VITE_ENCRYPTION_KEY is not defined. Encryption will be disabled or may fail.');
 }
 
+// CryptoJS passphrase output always starts with base64("Salted__").
+export const CIPHERTEXT_PREFIX = 'U2FsdGVkX1';
+export const hasEncryptionKey = Boolean(ENCRYPTION_KEY);
+
 export const encrypt = (text) => {
-  if (!text || !ENCRYPTION_KEY) return text;
+  if (!text) return text;
+  if (!ENCRYPTION_KEY) {
+    // A production build without the key used to store every entry in clear, silently.
+    if (import.meta.env.PROD) {
+      const error = new Error('VITE_ENCRYPTION_KEY is missing from this build: refusing to save unencrypted data.');
+      reportError(error, { encrypt: { reason: 'missing_key' } });
+      throw error;
+    }
+    return text;
+  }
   try {
     return CryptoJS.AES.encrypt(text, ENCRYPTION_KEY).toString();
   } catch (error) {
