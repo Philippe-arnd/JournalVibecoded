@@ -16,7 +16,7 @@ export async function sendEmail({
     data: Record<string, string>;
 }) {
     console.log(`Attempting to send email to ${to} with template ${templateName}`);
-    console.log(`Email data:`, JSON.stringify(data, null, 2));
+    // data is not logged: it holds verification / password-reset URLs with live tokens.
     try {
         const templatePath = path.join(process.cwd(), "src/templates", templateName);
         console.log(`Reading template from: ${templatePath}`);
