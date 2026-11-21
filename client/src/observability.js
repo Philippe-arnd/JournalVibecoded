@@ -136,7 +136,8 @@ function pauseReplay() {
 
 export function identifyUser(user) {
   if (!enabled || !user) return
-  const info = { id: user.id, name: user.name, email: user.email }
+  // id only: RUM data is kept for months, the email/name are not needed to group sessions.
+  const info = { id: user.id }
   openobserveRum.setUser(info)
   openobserveLogs.setUser(info)
 }
