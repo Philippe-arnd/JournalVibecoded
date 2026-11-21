@@ -1,4 +1,5 @@
-import { encrypt, decrypt } from '../utils/encryption';
+import { encrypt, decrypt, CIPHERTEXT_PREFIX, hasEncryptionKey } from '../utils/encryption';
+import { reportError } from '../observability';
 
 const VITE_API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 const API_URL = `${VITE_API_URL}/api`;
@@ -55,12 +56,17 @@ function toClientEntry(serverEntry) {
 }
 
 
+// A stored value that does not look like CryptoJS output was saved in clear (e.g. by a build
+// without the key, or before encryption existed). It is shown as is, then re-encrypted.
+const isPlaintext = (value) => typeof value === 'string' && value !== '' && !value.startsWith(CIPHERTEXT_PREFIX);
+
 // Decrypts the sensitive fields of a client entry (pure: returns a new object).
 function decryptEntry(entry) {
   const decryptedEntry = { ...entry };
   SENSITIVE_FIELDS.forEach(field => {
     if (decryptedEntry[field]) {
-      const decryptedValue = decrypt(decryptedEntry[field], { entryId: entry.id, field });
+      const stored = decryptedEntry[field];
+      const decryptedValue = isPlaintext(stored) ? stored : decrypt(stored, { entryId: entry.id, field });
       // Handle JSON fields
       if (field === 'ai_cited_entries' && typeof decryptedValue === 'string') {
         try {
@@ -76,12 +82,46 @@ function decryptEntry(entry) {
   return decryptedEntry;
 }
 
+// snake_case client field -> camelCase server field
+const toServerField = (field) => field.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+
+// Entries whose plaintext fields are being re-encrypted (avoids duplicate saves when
+// getEntries runs again before the first heal is done).
+const healing = new Set();
+
+// Re-saves, encrypted, the fields stored in clear. Everything else is sent back exactly as
+// stored (ciphertext untouched, same date, same `completed`), so only the storage format
+// of those fields changes. Fire-and-forget: a failure only means it is retried next load.
+function healPlaintextFields(serverEntries) {
+  if (!hasEncryptionKey) return;
+  for (const serverEntry of serverEntries || []) {
+    if (!serverEntry?.id || !serverEntry.entryDate || healing.has(serverEntry.id)) continue;
+    const plaintextFields = SENSITIVE_FIELDS.filter((f) => isPlaintext(serverEntry[toServerField(f)]));
+    if (plaintextFields.length === 0) continue;
+
+    const body = { entry_date: serverEntry.entryDate, completed: serverEntry.completed ?? false };
+    SENSITIVE_FIELDS.forEach((f) => {
+      const value = serverEntry[toServerField(f)];
+      body[f] = plaintextFields.includes(f) ? encrypt(value) : value;
+    });
+
+    healing.add(serverEntry.id);
+    apiRequest('/entries', { method: 'POST', body: JSON.stringify(body) })
+      .then(() => reportError(new Error('Re-encrypted plaintext fields'), {
+        heal: { entryId: serverEntry.id, fields: plaintextFields.join(',') },
+      }))
+      .catch((error) => reportError(error, { heal: { entryId: serverEntry.id, failed: true } }))
+      .finally(() => healing.delete(serverEntry.id));
+  }
+}
+
 export const entryService = {
   // READ: Get all entries for the current user
   async getEntries() {
     const data = await apiRequest('/entries');
     
     // Decrypt sensitive fields
+    healPlaintextFields(data);
     return data.map(serverEntry => decryptEntry(toClientEntry(serverEntry)));
   },
 
