@@ -146,3 +146,10 @@ export function clearUser() {
   openobserveRum.clearUser()
   openobserveLogs.clearUser()
 }
+
+// Reports a handled error to RUM with structured context. Never put user content in `context`
+// (ids and field names only): RUM data is kept for months.
+export function reportError(error, context) {
+  if (!enabled) return
+  openobserveRum.addError(error instanceof Error ? error : new Error(String(error)), context)
+}

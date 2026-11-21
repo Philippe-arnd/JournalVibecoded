@@ -54,33 +54,35 @@ function toClientEntry(serverEntry) {
     };
 }
 
+
+// Decrypts the sensitive fields of a client entry (pure: returns a new object).
+function decryptEntry(entry) {
+  const decryptedEntry = { ...entry };
+  SENSITIVE_FIELDS.forEach(field => {
+    if (decryptedEntry[field]) {
+      const decryptedValue = decrypt(decryptedEntry[field], { entryId: entry.id, field });
+      // Handle JSON fields
+      if (field === 'ai_cited_entries' && typeof decryptedValue === 'string') {
+        try {
+          decryptedEntry[field] = JSON.parse(decryptedValue);
+        } catch {
+          decryptedEntry[field] = decryptedValue;
+        }
+      } else {
+        decryptedEntry[field] = decryptedValue;
+      }
+    }
+  });
+  return decryptedEntry;
+}
+
 export const entryService = {
   // READ: Get all entries for the current user
   async getEntries() {
     const data = await apiRequest('/entries');
     
     // Decrypt sensitive fields
-    return data.map(serverEntry => {
-      const entry = toClientEntry(serverEntry);
-      const decryptedEntry = { ...entry };
-      
-      SENSITIVE_FIELDS.forEach(field => {
-        if (decryptedEntry[field]) {
-          const decryptedValue = decrypt(decryptedEntry[field]);
-          // Handle JSON fields
-          if (field === 'ai_cited_entries' && typeof decryptedValue === 'string') {
-            try {
-              decryptedEntry[field] = JSON.parse(decryptedValue);
-            } catch {
-              decryptedEntry[field] = decryptedValue;
-            }
-          } else {
-            decryptedEntry[field] = decryptedValue;
-          }
-        }
-      });
-      return decryptedEntry;
-    });
+    return data.map(serverEntry => decryptEntry(toClientEntry(serverEntry)));
   },
 
   // READ: Get today's entry if it exists
@@ -91,23 +93,7 @@ export const entryService = {
     const entry = toClientEntry(data);
 
     // Decrypt sensitive fields
-    const decryptedEntry = { ...entry };
-    SENSITIVE_FIELDS.forEach(field => {
-      if (decryptedEntry[field]) {
-        const decryptedValue = decrypt(decryptedEntry[field]);
-        // Handle JSON fields
-        if (field === 'ai_cited_entries' && typeof decryptedValue === 'string') {
-          try {
-            decryptedEntry[field] = JSON.parse(decryptedValue);
-          } catch {
-            decryptedEntry[field] = decryptedValue;
-          }
-        } else {
-          decryptedEntry[field] = decryptedValue;
-        }
-      }
-    });
-    return decryptedEntry;
+    return decryptEntry(entry);
   },
 
   // CREATE / UPDATE: Save entry data
@@ -139,23 +125,7 @@ export const entryService = {
     const entry = toClientEntry(data);
 
     // Decrypt before returning
-    const decryptedData = { ...entry };
-    SENSITIVE_FIELDS.forEach(field => {
-      if (decryptedData[field]) {
-        const decryptedValue = decrypt(decryptedData[field]);
-        // Handle JSON fields
-        if (field === 'ai_cited_entries' && typeof decryptedValue === 'string') {
-          try {
-            decryptedData[field] = JSON.parse(decryptedValue);
-          } catch {
-            decryptedData[field] = decryptedValue;
-          }
-        } else {
-          decryptedData[field] = decryptedValue;
-        }
-      }
-    });
-    return decryptedData;
+    return decryptEntry(entry);
   },
 
   // DELETE: Delete an entry by ID

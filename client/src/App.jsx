@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { entryService } from './services/entryService';
@@ -53,15 +53,22 @@ function App() {
   const [entries, setEntries] = useState([]);
   const [streak, setStreak] = useState(0);
   const [dataLoading, setDataLoading] = useState(false);
+  // Read through a ref so loadData does not depend on `entries`: depending on entries.length
+  // (or on the `user` object, which is a new reference on every session refetch) recreated
+  // loadData after each load and re-triggered the effect below, i.e. 2-5 identical
+  // GET /api/entries (and full re-decryption) on every page load.
+  const hasEntriesRef = useRef(false);
+  const userId = user?.id;
 
   // Centralized Data Loading
   const loadData = useCallback(async (background = false) => {
-    if (!user) return;
-    if (!background && entries.length === 0) setDataLoading(true);
+    if (!userId) return;
+    if (!background && !hasEntriesRef.current) setDataLoading(true);
 
     try {
       // 1. Fetch Entries using entryService (handles decryption)
       const entryData = await entryService.getEntries();
+      hasEntriesRef.current = (entryData || []).length > 0;
       setEntries(entryData || []);
 
       // 2. Calculate Streak locally
@@ -72,16 +79,17 @@ function App() {
     } finally {
       if (!background) setDataLoading(false);
     }
-  }, [user, entries.length]);
+  }, [userId]);
 
   useEffect(() => {
-    if (user) {
+    if (userId) {
       loadData();
     } else {
+      hasEntriesRef.current = false;
       setEntries([]);
       setStreak(0);
     }
-  }, [user, loadData]);
+  }, [userId, loadData]);
 
 
   // Render Loading

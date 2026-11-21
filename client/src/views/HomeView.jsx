@@ -28,7 +28,7 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete }) {
     if (!entries || entries.length === 0) return { streakCount: 0, isAtRisk: false };
     
     // Parse all entries into a set of YYYY-MM-DD
-    const entryDates = new Set(entries.map(e => e.entry_date.split('T')[0]));
+    const entryDates = new Set(entries.filter(e => e?.entry_date).map(e => e.entry_date.split('T')[0]));
 
     const today = new Date();
     const todayStr = getLocalDateStr(today);
@@ -81,8 +81,8 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete }) {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = getLocalDateStr(yesterday);
     
-    const hasYesterday = entries.some(e => e.entry_date.split('T')[0] === yesterdayStr);
-    const hasToday = entries.some(e => e.entry_date.split('T')[0] === todayStr);
+    const hasYesterday = entries.some(e => e?.entry_date?.split('T')[0] === yesterdayStr);
+    const hasToday = entries.some(e => e?.entry_date?.split('T')[0] === todayStr);
 
     if (hasToday) {
       onStartNew();
@@ -323,7 +323,7 @@ function CalendarView({ entries, onStartNew, onEdit, onDelete }) {
   const monthEntries = entries.filter(entry => {
     const entryDate = entry.entry_date; // YYYY-MM-DD
     const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-    return entryDate.startsWith(currentMonthStr);
+    return typeof entryDate === 'string' && entryDate.startsWith(currentMonthStr);
   });
 
   const entriesByDay = monthEntries.reduce((acc, entry) => {
