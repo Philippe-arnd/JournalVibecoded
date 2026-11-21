@@ -58,27 +58,43 @@ function App() {
   // loadData after each load and re-triggered the effect below, i.e. 2-5 identical
   // GET /api/entries (and full re-decryption) on every page load.
   const hasEntriesRef = useRef(false);
+  // A call made while a load is in flight joins it instead of firing another GET /api/entries
+  // (App's initial load and AuthenticatedHome's refresh-on-mount otherwise run back to back).
+  // After a write, pass { fresh: true }: the load then starts once the one in flight is done, so
+  // a request issued before the write can neither be reused nor overwrite the fresh result.
+  const inflightRef = useRef(null);
   const userId = user?.id;
 
   // Centralized Data Loading
-  const loadData = useCallback(async (background = false) => {
-    if (!userId) return;
-    if (!background && !hasEntriesRef.current) setDataLoading(true);
+  const loadData = useCallback((background = false, { fresh = false } = {}) => {
+    if (!userId) return Promise.resolve();
 
-    try {
-      // 1. Fetch Entries using entryService (handles decryption)
-      const entryData = await entryService.getEntries();
-      hasEntriesRef.current = (entryData || []).length > 0;
-      setEntries(entryData || []);
+    const fetchAndApply = async () => {
+      if (!background && !hasEntriesRef.current) setDataLoading(true);
+      try {
+        // 1. Fetch Entries using entryService (handles decryption)
+        const entryData = await entryService.getEntries();
+        hasEntriesRef.current = (entryData || []).length > 0;
+        setEntries(entryData || []);
 
-      // 2. Calculate Streak locally
-      setStreak(calculateStreak(entryData));
+        // 2. Calculate Streak locally
+        setStreak(calculateStreak(entryData));
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        if (!background) setDataLoading(false);
+      }
+    };
 
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      if (!background) setDataLoading(false);
-    }
+    const current = inflightRef.current;
+    if (current && !fresh) return current;
+    const next = (current ? current.catch(() => {}) : Promise.resolve())
+      .then(fetchAndApply)
+      .finally(() => {
+        if (inflightRef.current === next) inflightRef.current = null;
+      });
+    inflightRef.current = next;
+    return next;
   }, [userId]);
 
   useEffect(() => {
@@ -86,6 +102,7 @@ function App() {
       loadData();
     } else {
       hasEntriesRef.current = false;
+      inflightRef.current = null;
       setEntries([]);
       setStreak(0);
     }
@@ -181,7 +198,7 @@ function AuthenticatedHome({ entries, streak, refreshData, loading }) {
     if (window.confirm('Are you sure you want to delete this entry?')) {
       try {
         await entryService.deleteEntry(id);
-        await refreshData(true);
+        await refreshData(true, { fresh: true });
       } catch (error) {
         console.error('Failed to delete:', error);
         alert('Failed to delete entry: ' + error.message);
@@ -218,7 +235,7 @@ function AuthenticatedCreate({ onDataUpdate }) {
   const selectedEntry = location.state?.entry;
 
   const handleEntryFinish = () => {
-    onDataUpdate(true); // Refresh data before navigating back
+    onDataUpdate(true, { fresh: true }); // Refresh data (after the save) before navigating back
     navigate('/home');
   };
 
