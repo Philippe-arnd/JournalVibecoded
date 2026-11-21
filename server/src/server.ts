@@ -31,7 +31,8 @@ app.use("/api/o2-proxy", createO2Proxy());
 app.use(express.json({ limit: "10mb" }));
 
 app.use("/api/auth", (req, res, next) => {
-    console.log(`Auth Request: ${req.method} ${req.path}`, req.body);
+    // Never log req.body here: it carries plaintext passwords (sign-in, sign-up, reset).
+    console.log(`Auth Request: ${req.method} ${req.path}`);
     next();
 });
 
