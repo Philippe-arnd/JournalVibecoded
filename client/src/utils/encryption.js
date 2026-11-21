@@ -1,4 +1,5 @@
 import CryptoJS from 'crypto-js';
+import { reportError } from '../observability';
 
 const ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY;
 
@@ -16,7 +17,10 @@ export const encrypt = (text) => {
   }
 };
 
-export const decrypt = (ciphertext) => {
+// `context` ({ entryId, field }) is only used to identify which stored value failed; on failure the
+// ciphertext is still returned unchanged (never a placeholder), so that saving the entry cannot
+// overwrite the stored value with something else.
+export const decrypt = (ciphertext, context) => {
   if (!ciphertext || !ENCRYPTION_KEY) {
     if (!ENCRYPTION_KEY && ciphertext?.startsWith?.('U2FsdGVkX1')) {
       console.error('Decryption failed: VITE_ENCRYPTION_KEY is missing but data appears encrypted.');
@@ -30,12 +34,14 @@ export const decrypt = (ciphertext) => {
     
     if (!originalText && ciphertext.startsWith('U2FsdGVkX1')) {
       console.error('Decryption failed: Result was empty. This usually means the encryption key is incorrect.');
+      reportError(new Error('Decryption failed: empty result'), { decrypt: { ...context, length: ciphertext.length } });
       return ciphertext;
     }
     
     return originalText || ciphertext;
   } catch (error) {
     console.error('Decryption error:', error);
+    reportError(new Error(`Decryption error: ${error?.message}`), { decrypt: { ...context, length: ciphertext.length } });
     return ciphertext;
   }
 };
