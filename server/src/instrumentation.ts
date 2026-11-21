@@ -53,7 +53,7 @@ if (enabled) {
         // "request handler - x" spans; the express one is told the same (ExpressLayerType values).
         '@opentelemetry/instrumentation-router': { enabled: false },
         '@opentelemetry/instrumentation-express': {
-          ignoreLayersType: ['middleware', 'request_handler'] as unknown as never[],
+          ignoreLayersType: ['router', 'middleware', 'request_handler'] as unknown as never[],
         },
       }),
     ],
