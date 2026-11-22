@@ -464,6 +464,13 @@ Before proposing changes or merging code:
 6. Maintain `app.set('trust proxy', true)` and Service Worker API bypass in any infrastructure changes
 7. Check bundle size impact if adding new client dependencies: `cd client && npm run build`
 
+## Product analytics (OpenLens)
+
+The client reports usage to OpenLens (`client/src/openlens.js`, https://openlens.philapps.com). The whole app is under `data-openlens-mask`, so no decrypted text ever leaves the browser, and input values are never captured.
+
+- When you add, rename or remove a user-facing feature, update `openlens.features.yaml` (entry points, success event) in the same change, and add `data-feature="<key>"` to its main control. Then run `openlens-cli features lint --src client/src`.
+- Build-time config: `VITE_OPENLENS_HOST` and `VITE_OPENLENS_KEY` (a public capture key). Without them the SDK is not loaded.
+
 ## Database Backup Safety
 
 **CRITICAL: Always dump to the HOST filesystem, never inside the container.**

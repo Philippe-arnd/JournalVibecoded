@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, Check } from 'lucide-react';
 import { INSIGHTS_LIBRARY } from '../data/insights';
 import { getInsightIcon, getInsightTheme } from '../utils/insightUtils';
+import { lensTrack } from '../openlens';
 
 export default function DailysInsights() {
   const [insightsStack] = useState(() => {
@@ -16,6 +17,10 @@ export default function DailysInsights() {
     setDirection(1);
     setCurrentIndex(prev => prev + 1);
   };
+
+  useEffect(() => {
+    lensTrack('insights_viewed');
+  }, []);
 
   useEffect(() => {
     let timer;

@@ -9,6 +9,7 @@ import Logo from '../components/Logo';
 import DailysInsights from './DailysInsights';
 import PasswordInput from '../components/PasswordInput';
 import PasswordConfirmation from '../components/PasswordConfirmation';
+import { lensTrack } from '../openlens';
 
 // Helper for local YYYY-MM-DD
 const getLocalDateStr = (date) => {
@@ -136,7 +137,7 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete }) {
 
         <div className="flex items-center gap-1">
           <button 
-            onClick={() => setViewMode('calendar')} 
+            onClick={() => setViewMode('calendar')}  data-feature="calendar"
             className={`p-2 rounded-full transition-colors ${viewMode === 'calendar' ? 'text-journal-900 bg-journal-100' : 'text-journal-400 hover:text-journal-600 hover:bg-journal-100'}`}
           >
             <CalendarIcon size={24} strokeWidth={1.5} />
@@ -154,7 +155,7 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete }) {
       <div className="px-6 mb-12 flex justify-center sticky top-6 z-30">
         <div className="bg-white/90 backdrop-blur-md p-1 rounded-2xl shadow-sm border border-journal-100 flex gap-1">
           <button
-            onClick={() => setViewMode('timeline')}
+            onClick={() => setViewMode('timeline')} data-feature="timeline"
             className={`px-5 py-2 rounded-xl flex items-center gap-2 text-sm font-medium transition-all ${
               viewMode === 'timeline' 
                 ? 'bg-journal-900 text-white shadow-md' 
@@ -164,7 +165,7 @@ export default function HomeView({ onStartNew, entries, onEdit, onDelete }) {
             <List size={16} strokeWidth={2} /> Timeline
           </button>
           <button
-            onClick={() => setViewMode('insights')}
+            onClick={() => setViewMode('insights')} data-feature="insights"
             className={`px-5 py-2 rounded-xl flex items-center gap-2 text-sm font-medium transition-all ${
               viewMode === 'insights' 
                 ? 'bg-journal-900 text-white shadow-md' 
@@ -253,7 +254,7 @@ function TimelineView({ entries, onStartNew, onEdit, onDelete }) {
         {/* Add Button */}
         <div className="flex justify-center mb-12">
           <button 
-            onClick={onStartNew}
+            onClick={onStartNew} data-feature="write-entry"
             className="bg-journal-900 text-white w-16 h-16 rounded-full shadow-xl shadow-journal-900/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all group border-[3px] border-journal-50 z-20"
           >
             <Plus size={32} strokeWidth={1.5} className="group-hover:rotate-90 transition-transform duration-300" />
@@ -337,6 +338,7 @@ function CalendarView({ entries, onStartNew, onEdit, onDelete }) {
   const handleDayClick = (day) => {
     const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
     setSelectedDate(newDate);
+    lensTrack('day_opened');
   };
 
   return (
@@ -408,7 +410,7 @@ function CalendarView({ entries, onStartNew, onEdit, onDelete }) {
               <div className="bg-white rounded-3xl p-12 border border-journal-100 border-dashed text-center flex flex-col items-center">
                 <p className="text-journal-400 mb-8 font-light">No entry for this day.</p>
                 <button 
-                  onClick={() => onStartNew({ entry_date: getLocalDateStr(selectedDate) })}
+                  onClick={() => onStartNew({ entry_date: getLocalDateStr(selectedDate) })} data-feature="write-entry"
                   className="bg-journal-900 text-white w-16 h-16 rounded-full shadow-xl shadow-journal-900/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all group border-[3px] border-white z-20"
                 >
                   <Plus size={32} strokeWidth={1.5} className="group-hover:rotate-90 transition-transform duration-300" />
@@ -448,7 +450,10 @@ function TimelineCard({ entry, onEdit, onDelete }) {
       >
         <div 
           className="p-5 cursor-pointer"
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => {
+            if (!isExpanded) lensTrack('entry_opened');
+            setIsExpanded(!isExpanded);
+          }}
         >
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">

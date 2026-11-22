@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { authClient } from '../lib/auth';
 import { identifyUser, clearUser } from '../observability';
+import { lensIdentify, lensReset } from '../openlens';
 
 const AuthContext = createContext({});
 
@@ -25,8 +26,13 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (user) identifyUser(user);
-    else if (!isPending) clearUser();
+    if (user) {
+      identifyUser(user);
+      lensIdentify(user);
+    } else if (!isPending) {
+      clearUser();
+      lensReset();
+    }
   }, [user, isPending]);
 
   const value = {

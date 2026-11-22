@@ -5,9 +5,11 @@ import App from './App.jsx'
 import './index.css'
 import { AuthProvider } from './contexts/AuthContext'
 import { initObservability } from './observability'
+import { initOpenLens } from './openlens'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 initObservability()
+initOpenLens()
 
 // Register service worker
 if ('serviceWorker' in navigator) {
