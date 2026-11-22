@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Mic, Square, Loader2, Play, Pause, RotateCcw } from 'lucide-react';
 import { transcribeAudio } from '../services/transcriptionService';
 import { getTranscriptionLanguage } from '../utils/transcriptionLanguage';
+import { lensTrack } from '../openlens';
 
 // Recording is capped at 60s client-side to keep audio payloads small
 // (stored as encrypted base64 alongside the entry text, see entryService.js)
@@ -130,6 +131,7 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
           if (!mountedRef.current) return;
           if (text) {
             onTranscript(text);
+            lensTrack('voice_transcribed');
           } else {
             setErrorMessage("Aucune parole n'a été reconnue, l'audio a été conservé.");
           }
@@ -218,6 +220,7 @@ export default function VoiceInputButton({ audioValue, onAudioChange, onTranscri
     <button
       type="button"
       onClick={startRecording}
+      data-feature="voice-input"
       aria-label="Enregistrer un vocal"
       title="Enregistrer un vocal"
       className="flex items-center justify-center min-h-[44px] min-w-[44px]

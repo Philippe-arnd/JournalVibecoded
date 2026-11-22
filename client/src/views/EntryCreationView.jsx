@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { lensTrack } from '../openlens';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, X, Check, Loader2, Bold, List, Indent, Outdent } from 'lucide-react';
 import { entryService } from '../services/entryService';
@@ -233,6 +234,7 @@ export default function EntryCreationView({ onClose, onFinish, initialEntry }) {
       setIsSaving(true);
       try {
         await entryService.saveEntry(payload);
+        lensTrack('entry_saved');
       } catch (error) {
         console.error("Failed to save:", error);
         fieldsToSave.forEach(field => dirtyFieldsRef.current.add(field)); // retry next save

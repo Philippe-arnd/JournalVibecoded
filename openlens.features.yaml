@@ -1,0 +1,36 @@
+# OpenLens feature map for Journal (https://openlens.philapps.com).
+# Kept current by the agents that change the app: see the rule in CLAUDE.md.
+version: 1
+churn_after_days: 14
+# Journal has no user roles: every account is a plain user.
+roles:
+  - key: user
+    match: ["user"]
+features:
+  - key: write-entry
+    name: Write the daily entry
+    purpose: The core loop; users capture their day in a few sections.
+    entry:
+      routes: ["/create"]
+      selectors: ['[data-feature="write-entry"]']
+    success: entry_saved
+  - key: voice-input
+    name: Dictate by voice
+    entry:
+      selectors: ['[data-feature="voice-input"]']
+    success: voice_transcribed
+  - key: timeline
+    name: Read past entries (timeline)
+    entry:
+      selectors: ['[data-feature="timeline"]']
+    success: entry_opened
+  - key: calendar
+    name: Browse by calendar
+    entry:
+      selectors: ['[data-feature="calendar"]']
+    success: day_opened
+  - key: insights
+    name: Insights on past entries
+    entry:
+      selectors: ['[data-feature="insights"]']
+    success: insights_viewed
