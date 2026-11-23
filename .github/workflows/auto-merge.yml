@@ -34,6 +34,7 @@ jobs:
       conditional-checks: |
         security-performance / 📦 Bundle Size
         Build & Test Docker Images / 🐳 Build & Validate Docker Image
+        Build & Test Docker Images / 🛢️ DB Upgrade Check
       merge-method: squash
       base-branch: main
       block-label: ''
