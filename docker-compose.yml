@@ -1,7 +1,7 @@
 # Preview Deployment Test
 services:
   db:
-    image: postgres:17-alpine@sha256:a77aa70e641402a21411b92b721c58d10f23b50ae5fdd2333efd22d166e1e5f7
+    image: postgres:17-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
     restart: always
     environment:
       # Admin user — created by Docker at init; must match DATABASE_ADMIN_URL credentials
@@ -56,7 +56,7 @@ services:
   # talks to it, over the internal network. First boot downloads the model (~500MB
   # for `small`), hence the long start_period.
   whisper:
-    image: onerahmet/openai-whisper-asr-webservice:v1.10.0
+    image: onerahmet/openai-whisper-asr-webservice:v1.11.0
     restart: always
     environment:
       - ASR_ENGINE=faster_whisper
