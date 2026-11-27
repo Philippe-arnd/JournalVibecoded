@@ -17,14 +17,16 @@ ENV VITE_OO_SERVICE_NAME=$VITE_OO_SERVICE_NAME
 # OpenLens (public capture key, baked into the browser bundle at build time)
 ARG VITE_OPENLENS_HOST
 ARG VITE_OPENLENS_KEY
-ARG SOURCE_COMMIT
 ENV VITE_OPENLENS_HOST=$VITE_OPENLENS_HOST
 ENV VITE_OPENLENS_KEY=$VITE_OPENLENS_KEY
-ENV SOURCE_COMMIT=$SOURCE_COMMIT
 
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
 COPY . .
+# The deployed commit names the OpenLens release (client/vite.config.js). Declared
+# after npm install: a new commit must not invalidate the dependency layer.
+ARG SOURCE_COMMIT
+ENV SOURCE_COMMIT=$SOURCE_COMMIT
 RUN npm run build
 
 # Production stage

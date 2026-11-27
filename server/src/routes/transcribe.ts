@@ -1,5 +1,6 @@
 import { Router, raw } from "express";
 import { requireAuth } from "../middleware/auth";
+import { lensCapture } from "../openlens";
 
 const router = Router();
 
@@ -123,6 +124,7 @@ router.post(
         } catch (error: any) {
             const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
             console.error("Transcription failed:", error?.message);
+            lensCapture(error, req);
             return timedOut
                 ? res.status(504).json({ error: "Transcription timed out" })
                 : res.status(502).json({ error: "Transcription service unavailable" });

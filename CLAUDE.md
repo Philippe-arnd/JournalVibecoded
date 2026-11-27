@@ -470,6 +470,8 @@ The client reports usage to OpenLens (`client/src/openlens.js`, https://openlens
 
 - When you add, rename or remove a user-facing feature, update `openlens.features.yaml` (entry points, success event) in the same change, and add `data-feature="<key>"` to its main control. Then run `openlens-cli features lint --src client/src`.
 - Build-time config: `VITE_OPENLENS_HOST` and `VITE_OPENLENS_KEY` (a public capture key). Without them the SDK is not loaded.
+- The browser SDK is initialised by `client/src/openlens.js` itself (no `data-key`), to pass `traceOrigins` = the `VITE_API_URL` origin: API calls then carry `x-openlens-session`, allowed in the server's CORS.
+- Server side (`server/src/openlens.ts`, SDK vendored as `server/src/vendor/openlens-node.mjs`, v0.7.0, emitted by `allowJs`): route stats, runtime health, outgoing calls per host (Resend, Whisper) and server errors. `OPENLENS_HOST` / `OPENLENS_KEY` at runtime, defaulting to the `VITE_` values; off under tests. A route that catches its own error and answers 5xx must call `lensCapture(error, req)`. Release = first 7 chars of `SOURCE_COMMIT`, as in the browser. To update the SDK, copy `sdk/node/src/index.js` of the OpenLens tag again (keep the header).
 
 ## Database Backup Safety
 
