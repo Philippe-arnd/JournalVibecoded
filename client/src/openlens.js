@@ -13,16 +13,26 @@ const host = (env.VITE_OPENLENS_HOST || '').replace(/\/$/, '')
 const key = env.VITE_OPENLENS_KEY
 let pending = []
 
+// The API lives on another origin (VITE_API_URL): listing it lets the SDK add
+// the x-openlens-session header to API calls, so a server error links to the
+// session and its replay. The server's CORS allows that header.
+function apiOrigins() {
+  try {
+    return env.VITE_API_URL ? [new URL(env.VITE_API_URL, window.location.origin).origin] : []
+  } catch {
+    return []
+  }
+}
+
 export function initOpenLens() {
   if (!host || !key || document.getElementById('openlens-sdk')) return
   const s = document.createElement('script')
   s.id = 'openlens-sdk'
   s.src = `${host}/c.js`
   s.async = true
-  s.dataset.key = key
-  s.dataset.host = host
-  s.dataset.release = __APP_RELEASE__
+  // No data-key: c.js then waits for this init, which adds traceOrigins.
   s.onload = () => {
+    window.openlens.init({ host, key, release: __APP_RELEASE__, traceOrigins: apiOrigins() })
     const calls = pending
     pending = []
     calls.forEach((f) => f(window.openlens))

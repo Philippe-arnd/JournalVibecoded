@@ -5,10 +5,14 @@ import { auth } from "./auth";
 import entriesRouter from "./routes/entries";
 import transcribeRouter from "./routes/transcribe";
 import { createO2Proxy } from "./o2-proxy";
+import { lensRequests, lensErrors } from "./openlens";
 
 const app = express();
 
 app.set('trust proxy', true);
+
+// OpenLens route stats and runtime health: first, so every request counts
+app.use(lensRequests());
 
 const allowedOrigins = [
     process.env.CLIENT_URL,
@@ -20,7 +24,7 @@ app.use(cors({
     origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "traceparent", "tracestate", "baggage"]
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "traceparent", "tracestate", "baggage", "x-openlens-session"]
 }));
 
 // OpenObserve RUM relay: must run before express.json (it needs the raw body)
@@ -50,6 +54,9 @@ app.use("/api/transcribe", transcribeRouter);
 app.all(/.*/, (req, res) => {
     res.status(404).send("Not Found");
 });
+
+// OpenLens: errors a route did not catch (after every route)
+app.use(lensErrors());
 
 export default app;
 

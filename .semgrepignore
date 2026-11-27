@@ -1,6 +1,9 @@
 # Semgrep Ignore File
 # Excludes files from SAST security scanning
 
+# Vendored third-party code (OpenLens Node SDK, copied as is)
+server/src/vendor/
+
 # Dependencies
 node_modules/
 **/node_modules/

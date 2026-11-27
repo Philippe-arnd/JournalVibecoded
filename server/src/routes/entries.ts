@@ -3,6 +3,7 @@ import { db, withRLS } from "../db";
 import { entries } from "../db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth";
+import { lensCapture } from "../openlens";
 
 const router = Router();
 
@@ -41,6 +42,7 @@ router.get("/", async (req: any, res) => {
         res.json(userEntries);
     } catch (error) {
         console.error(error);
+        lensCapture(error, req);
         res.status(500).json({ error: "Failed to fetch entries" });
     }
 });
@@ -61,6 +63,7 @@ router.get("/today", async (req: any, res) => {
         res.json(entry || null);
     } catch (error) {
         console.error(error);
+        lensCapture(error, req);
         res.status(500).json({ error: "Failed to fetch today's entry" });
     }
 });
@@ -123,6 +126,7 @@ router.post("/", async (req: any, res) => {
         res.json(result);
     } catch (error) {
         console.error(error);
+        lensCapture(error, req);
         res.status(500).json({ error: "Failed to save entry" });
     }
 });
@@ -142,6 +146,7 @@ router.delete("/:id", async (req: any, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error(error);
+        lensCapture(error, req);
         res.status(500).json({ error: "Failed to delete entry" });
     }
 });
